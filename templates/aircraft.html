@@ -1,0 +1,12 @@
+<html>
+    <head>
+        <title>Aircraft</title>
+    </head>
+    <body>
+        <table>
+        {% for ap in airplanes %}
+        <tr><td>{{ ap[1] }}</td><td>{{ ap[0] }}</td></tr>
+        {% endfor %}
+        </table>
+    </body>
+</html>

@@ -1,59 +1,47 @@
-import json
-import time
-
-import threading
+import json, time
 
 from flask import Flask
 from flask import Response
+from flask import render_template
 
 from adsb.config import Config
 from adsb.basestationdb import BaseStationDB
-from adsb.modesmixer import ModeSMixer
-from adsb.military import MilRanges
 
+from updateThread import UpdaterThread
 
 app = Flask(__name__)
 
 adsb_config = Config('config.json')
-bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
+bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")        
 
-class UpdaterThread(threading.Thread):
+updater = UpdaterThread(adsb_config)
+updater.start()
 
-    def __init__(self, config):
+@app.route("/api")
+def rest_api():
+    response = []
 
-        threading.Thread.__init__(self)
-        self.mm2 = ModeSMixer(config.host, config.port)
-        self.mil_ranges = MilRanges(config.data_folder)
-        self.interrupted = False
+    for icao24, tmstmp in updater.aircraft.items():
+        aircraft = bs_db.query_aircraft(icao24)
 
-    def run(self):
+        #response.append((str(aircraft),time.ctime(tmstmp)))
+        response.append(str(aircraft))
 
-        while not self.interrupted:
-            print("hello from thread %s, " % threading.get_ident())
-            time.sleep(2)
 
-        print("interupted")
-
-t = UpdaterThread(adsb_config)
-t.start()
-#print(threading.get_ident())
+    #print(response)
+    return Response(json.dumps(response), mimetype='application/json')
 
 @app.route("/")
-def hello():
-
-
-    t.interrupted = True
+def index():
 
     response = []
 
-    #for icao24 in mm2.query_live_aircraft():
+    for icao24, tmstmp in updater.aircraft.items():
+        aircraft = bs_db.query_aircraft(icao24)
 
-     #   aircraft = bs_db.query_aircraft(icao24)
-
-     #   response.append(str(aircraft))
-
-    print(response)
-    return Response(json.dumps(response), mimetype='application/json')
+        response.append((str(aircraft),time.ctime(tmstmp)))
+        #response.append(str(aircraft))
+    return render_template('aircraft.html', airplanes=response)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=False)
