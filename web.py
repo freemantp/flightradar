@@ -3,6 +3,7 @@ import json, time
 from flask import Flask
 from flask import Response
 from flask import render_template
+from flask import jsonify
 
 from adsb.config import Config
 from adsb.basestationdb import BaseStationDB
@@ -24,11 +25,10 @@ def rest_api():
     for icao24, tmstmp in updater.aircraft.items():
         aircraft = bs_db.query_aircraft(icao24)
 
-        #response.append((str(aircraft),time.ctime(tmstmp)))
-        response.append(str(aircraft))
+        if aircraft:
+            response.append((aircraft.__dict__, time.ctime(tmstmp)))
 
 
-    #print(response)
     return Response(json.dumps(response), mimetype='application/json')
 
 @app.route("/")
@@ -39,8 +39,9 @@ def index():
     for icao24, tmstmp in updater.aircraft.items():
         aircraft = bs_db.query_aircraft(icao24)
 
-        response.append((str(aircraft),time.ctime(tmstmp)))
-        #response.append(str(aircraft))
+        if aircraft:
+            response.append((aircraft.__dict__, time.ctime(tmstmp)))
+    
     return render_template('aircraft.html', airplanes=response)
 
 if __name__ == '__main__':

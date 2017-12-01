@@ -15,17 +15,19 @@ class UpdaterThread(threading.Thread):
 
         self.aircraft = dict()
 
-        print("Created thread")
-
     def run(self):
 
         while not self.interrupted:
 
-            for icao24 in self.mm2.query_live_aircraft():
+            icaos = self.mm2.query_live_aircraft()
+
+            for icao24 in icaos:
 
                 if icao24 not in self.aircraft and self.mil_ranges.is_military(icao24):
                     self.aircraft[icao24] = time.time()
-                    
+
+
+            #print("Processed %d codes" % len(icaos))        
             time.sleep(5)
 
         print("interupted")

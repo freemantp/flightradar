@@ -1,12 +1,35 @@
 <html>
     <head>
         <title>Aircraft</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     </head>
     <body>
-        <table>
-        {% for ap in airplanes %}
-        <tr><td>{{ ap[1] }}</td><td>{{ ap[0] }}</td></tr>
-        {% endfor %}
+        <div class="container">
+        <table class="table table-striped" width="500px">
+            <thead>
+                <tr>
+                    <th scope="col">Silhouette</th>
+                    <th scope="col">Mode-S</th>
+                    <th scope="col">Registration</th>
+                    <th scope="col">ICAO</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Operator</th>
+                    <th scope="col">First contact</th>
+                </tr>
+            </thead> 
+            <tbody>
+                {% for ap in airplanes %}
+                <tr>
+                    <td><img src="https://radar.domain.org/img/silhouettes/{{ ap[0]['type1']}}.bmp"</td>
+                    <td>{{ ap[0]['modes_hex']}}</td>
+                    <td>{{ ap[0]['reg'] }}</td>
+                    <td>{{ ap[0]['type1'] }}</td>
+                    <td>{{ ap[0]['type2'] }}</td>
+                    <td>{{ ap[0]['operator'] }}</td>
+                    <td>{{ ap[1]}}</td>
+                </tr>
+                {% endfor %}
+        </tbody>  
         </table>
     </body>
 </html>
