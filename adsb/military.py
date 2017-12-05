@@ -77,7 +77,7 @@ if __name__ == "__main__":
         while True:
             msm = ModeSMixer(app_cfg.host, app_cfg.port)
 
-            for line in msm.query_live_aircraft():
+            for line in msm.query_live_icao24():
                 handle_ac(line.strip())
             
             time.sleep(10)

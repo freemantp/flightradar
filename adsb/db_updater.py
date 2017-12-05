@@ -23,29 +23,30 @@ class DbUpdater:
         while True:
 
             print("quering modesmixer")
-            live_aircraft = msm.query_live_aircraft()
+            live_aircraft = msm.query_live_positions()
             print("got %d live ones" % len(live_aircraft))
-            for hex in live_aircraft:
+            for pos_report in live_aircraft:
 
-                aircraft = bs_db.query_aircraft(hex)
+                icao24 = pos_report[0]
+                aircraft = bs_db.query_aircraft(icao24)
 
                 if aircraft and not aircraft.is_complete():
 
-                    if hex not in fr24_queried:
-                        print("quering fr24 for %s" % hex)
-                        fr24aircraft = fr24.query_aircraft(hex)
-                        fr24_queried.add(hex)
+                    if icao24 not in fr24_queried:
+                        print("quering fr24 for %s" % icao24)
+                        fr24aircraft = fr24.query_aircraft(icao24)
+                        fr24_queried.add(icao24)
                         print("fr24: %s" % fr24aircraft)
                         if fr24aircraft:
                             aircraft.merge(fr24aircraft)
                             updated = bs_db.update_aircraft(aircraft)
                             print("%s  - updated=%s" % (aircraft, updated))
                         else:
-                            not_found.add(hex)
+                            not_found.add(icao24)
 
                 if not aircraft:
-                    fr24aircraft = fr24.query_aircraft(hex)
-                    fr24_queried.add(hex)
+                    fr24aircraft = fr24.query_aircraft(icao24)
+                    fr24_queried.add(icao24)
                     if fr24aircraft:
                         inserted = bs_db.insert_aircraft(fr24aircraft)
                         print("%s  - inserted=%s" % (fr24aircraft, inserted))
@@ -67,28 +68,28 @@ class DbUpdater:
                 icaos_from_file.add(icao24)
 
         fr24 = Flightradar24()
-        for hex in icaos_from_file:
+        for icao24 in icaos_from_file:
 
-            aircraft = bs_db.query_aircraft(hex)
+            aircraft = bs_db.query_aircraft(icao24)
 
             if aircraft and not aircraft.is_complete():
 
-                if hex not in fr24_queried:
-                    print("quering fr24 for %s" % hex)
-                    fr24aircraft = fr24.query_aircraft(hex)
+                if icao24 not in fr24_queried:
+                    print("quering fr24 for %s" % icao24)
+                    fr24aircraft = fr24.query_aircraft(icao24)
                     break
-                    fr24_queried.add(hex)
+                    fr24_queried.add(icao24)
                     print("fr24: %s" % fr24aircraft)
                     if fr24aircraft:
                         aircraft.merge(fr24aircraft)
                         updated = bs_db.update_aircraft(aircraft)
                         print("%s  - updated=%s" % (aircraft,updated))
                     else:
-                        not_found.add(hex)
+                        not_found.add(icao24)
 
             if not aircraft:
-                fr24aircraft = fr24.query_aircraft(hex)
-                fr24_queried.add(hex)
+                fr24aircraft = fr24.query_aircraft(icao24)
+                fr24_queried.add(icao24)
                 if fr24aircraft:
                     inserted = bs_db.insert_aircraft(fr24aircraft)
                     print("%s  - inserted=%s" % (fr24aircraft,inserted))        
@@ -96,7 +97,7 @@ class DbUpdater:
 
     def read_csv():
         for plane in Tabular.parse_csv(rdataFolder + r'\\Mil.csv'):
-            aircraft = bs_db.query_aircraft(plane.modes_hex)
+            aircraft = bs_db.query_aircraft(plane.modes_icao24)
             if aircraft:
                 if not aircraft.is_complete():
                     bs_db.update_aircraft(plane)

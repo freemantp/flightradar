@@ -41,7 +41,7 @@ def update_live_from_fr24():
     while True:
 
         print("quering modesmixer")
-        live_aircraft = msm.query_live_aircraft()
+        live_aircraft = msm.query_live_icao24()
         print("got %d live ones" % len(live_aircraft))
         for hex in live_aircraft:
 

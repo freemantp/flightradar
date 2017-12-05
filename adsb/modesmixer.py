@@ -19,31 +19,50 @@ class ModeSMixer:
             "Content-type": "application/json", "Accept": "*/*"
         }
 
-        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""   
+        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
 
-    def query_live_aircraft(self, force_initial=False):
-
+    def get_flight_info(self, force_initial=False):
         msg_body = self.body % (0 if force_initial else self.epoch)
 
         conn = HTTPConnection(self.host, self.port)
         conn.request('POST', '/json', body=msg_body, headers=self.headers)
-
-        #get the response back
         res = conn.getresponse()
-        # at this point you could check the status etc
-        # this gets the page text
         data = res.read()  
 
         json_obj = json.loads(data.decode())
 
         flights = json_obj['stats']['flights']
         self.epoch = json_obj['stats']['epoch']
+        
+        conn.close()
+        return flights
+
+    def query_live_icao24(self):
 
         hexcodes = []
 
-        for fl in flights:
+        for fl in self.get_flight_info():
             icaohex = str(fl['I'])
             hexcodes.append(icaohex)
 
-        conn.close()
+        
         return hexcodes
+
+    def query_live_positions(self):
+
+        """ Returns a list of Mode-S adresses with current position information"""
+
+        flights = []
+
+        for flight in self.get_flight_info():
+            if 'LA' in flight and 'LO' in flight and 'A' in flight:
+
+                icao24 = str(flight['I'])
+                lat = flight['LA'] if 'LA' in flight and flight['LA'] else None
+                lon = flight['LO'] if 'LO' in flight and flight['LO'] else None
+                alt = flight['A'] if 'A' in flight and flight['A'] else None
+
+                if lat and lon or alt:
+                    flights.append((icao24, (lat, lon, alt)))
+
+        return flights

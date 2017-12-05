@@ -4,31 +4,75 @@ import time
 from adsb.modesmixer import ModeSMixer
 from adsb.military import MilRanges
 
+class AircraftEntry:
+
+    def __init__(self):
+        self.first_seen = time.time()
+        self.last_seen = self.first_seen
+        self.pos = []
+
+
 class UpdaterThread(threading.Thread):
 
     def __init__(self, config):
 
         threading.Thread.__init__(self)
-        self.mm2 = ModeSMixer(config.host, config.port)
-        self.mil_ranges = MilRanges(config.data_folder)
-        self.interrupted = False
 
-        self.aircraft = dict()
+        self._mm2 = ModeSMixer(config.host, config.port)
+        self._mil_ranges = MilRanges(config.data_folder)
+        self.interrupted = False
+        self._entries = dict()
+
+    def get_active_icaos(self):
+        return self._entries.keys()
+
+    def get_active_entries(self):
+        return self._entries.items()
+
+    def get_entry(self, icao24):
+        return self._entries[icao24] if icao24 in self._entries else None
+
+    def cleanup_items(self):
+
+        now = time.time()
+        to_delete = []
+
+        for item in self._entries.items():
+            delta = int(now - item[1].last_seen)
+            if delta > 86400: #24h
+                to_delete.append(item[0])
+
+        for icao24 in to_delete:
+            self._entries.pop(icao24)
+            print("cleaned %s" % icao24)
+
+    def update_data(self, icao24, position=None):
+
+        if icao24 not in self._entries:
+            self._entries[icao24] = AircraftEntry()
+
+        timestamp = time.time()
+
+        if position:
+            self._entries[icao24].last_seen = timestamp
+            self._entries[icao24].pos.append(position)
+        else:
+            self._entries[icao24].last_seen = timestamp             
 
     def run(self):
 
         while not self.interrupted:
 
-            icaos = self.mm2.query_live_aircraft()
+            positions = self._mm2.query_live_positions()
 
-            for icao24 in icaos:
+            for entry in positions:
+                icao24 = entry[0]
 
-                if icao24 not in self.aircraft and self.mil_ranges.is_military(icao24):
-                    self.aircraft[icao24] = time.time()
+                if self._mil_ranges.is_military(icao24):
+                    self.update_data(icao24, entry[1])
 
-
-            #print("Processed %d codes" % len(icaos))        
             time.sleep(5)
+            self.cleanup_items()
 
         print("interupted")
 
