@@ -22,7 +22,7 @@ class MilRanges:
             csvfile.close()
 
     def is_military(self, icao24):
-
+        
         """ Returns true if the icao code military range """
         icao_nr = int(icao24, 16)
 
@@ -36,6 +36,14 @@ class MilRanges:
 
         """ Returns true if the icao code is in the Swiss military range """
         return icao >= 0x4B7000 and icao <= 0x4B7FFF
+    
+    @staticmethod
+    def is_swiss(icaohex):
+        if icaohex and icaohex[0:2] == "4B":
+            third = int(icaohex[2], 16)
+            if third >= 0 and third <= 8:
+                return True
+        return False
 
 
 

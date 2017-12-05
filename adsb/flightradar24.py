@@ -2,7 +2,7 @@ from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
 import json
 import time
 
-from aircraft import Aircraft
+from .aircraft import Aircraft
 
 class Flightradar24:
 

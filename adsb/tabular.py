@@ -1,5 +1,5 @@
 import csv
-from aircraft import Aircraft
+from .aircraft import Aircraft
 
 class Tabular:
 

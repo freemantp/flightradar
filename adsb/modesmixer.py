@@ -12,17 +12,21 @@ class ModeSMixer:
 
         self.host = host
         self.port = port
+        self.epoch = 0
 
         self.headers = { 
             'Authorization' : 'Basic %s' %  b64encode(b"user:pwdhere").decode("ascii"),
             "Content-type": "application/json", "Accept": "*/*"
         }
-        self.body = """{"req":"getStats","data":{"statsType":"flights","id":0}}"""     
 
-    def query_live_aircraft(self):
+        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""   
 
-        conn = HTTPConnection(self. host,self.port)
-        conn.request('POST', '/json', body=self.body, headers=self.headers)
+    def query_live_aircraft(self, force_initial=False):
+
+        msg_body = self.body % (0 if force_initial else self.epoch)
+
+        conn = HTTPConnection(self.host, self.port)
+        conn.request('POST', '/json', body=msg_body, headers=self.headers)
 
         #get the response back
         res = conn.getresponse()
@@ -33,13 +37,13 @@ class ModeSMixer:
         json_obj = json.loads(data.decode())
 
         flights = json_obj['stats']['flights']
+        self.epoch = json_obj['stats']['epoch']
 
         hexcodes = []
 
         for fl in flights:
             icaohex = str(fl['I'])
             hexcodes.append(icaohex)
-
 
         conn.close()
         return hexcodes
