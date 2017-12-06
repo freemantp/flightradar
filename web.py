@@ -28,7 +28,6 @@ def rest_api():
         if aircraft:
             response.append((aircraft.__dict__, time.ctime(tmstmp)))
 
-
     return Response(json.dumps(response), mimetype='application/json')
 
 @app.route("/") 
@@ -53,6 +52,17 @@ def get_positions(icao24):
 
     if entries:
         return Response(json.dumps(entries.pos), mimetype='application/json')
+    else:
+        return "Not found", 404
+
+
+@app.route("/map/<icao24>") 
+def get_map(icao24):
+
+    entries = updater.get_entry(icao24)
+
+    if entries:
+        return render_template('map.html', positions=entries.pos)
     else:
         return "Not found", 404
 
