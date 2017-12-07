@@ -58,13 +58,14 @@ def get_positions(icao24):
 
 @app.route("/map/<icao24>") 
 def get_map(icao24):
+    return render_template('map.html', icao24=icao24)
 
-    entries = updater.get_entry(icao24)
-
-    if entries:
-        return render_template('map.html', positions=entries.pos)
-    else:
-        return "Not found", 404
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False)
