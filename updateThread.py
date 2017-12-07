@@ -57,7 +57,7 @@ class UpdaterThread(threading.Thread):
             self._entries[icao24].last_seen = timestamp
             self._entries[icao24].pos.append(position)
         else:
-            self._entries[icao24].last_seen = timestamp             
+            self._entries[icao24].last_seen = timestamp
 
     def run(self):
 
@@ -69,7 +69,8 @@ class UpdaterThread(threading.Thread):
                 icao24 = entry[0]
 
                 if self._mil_ranges.is_military(icao24):
-                    self.update_data(icao24, entry[1])
+                    if entry[1][0] and entry[1][1]:
+                        self.update_data(icao24, entry[1])
 
             time.sleep(5)
             self.cleanup_items()

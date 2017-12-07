@@ -14,7 +14,7 @@ class ModeSMixer:
         self.port = port
         self.epoch = 0
 
-        self.headers = { 
+        self.headers = {
             'Authorization' : 'Basic %s' %  b64encode(b"user:pwdhere").decode("ascii"),
             "Content-type": "application/json", "Accept": "*/*"
         }
@@ -33,7 +33,7 @@ class ModeSMixer:
 
         flights = json_obj['stats']['flights']
         self.epoch = json_obj['stats']['epoch']
-        
+
         conn.close()
         return flights
 
@@ -45,7 +45,6 @@ class ModeSMixer:
             icaohex = str(fl['I'])
             hexcodes.append(icaohex)
 
-        
         return hexcodes
 
     def query_live_positions(self):
