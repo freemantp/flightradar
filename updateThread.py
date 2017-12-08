@@ -72,7 +72,7 @@ class UpdaterThread(threading.Thread):
                     if entry[1][0] and entry[1][1]:
                         self.update_data(icao24, entry[1])
 
-            time.sleep(5)
+            time.sleep(2)
             self.cleanup_items()
 
         print("interupted")
