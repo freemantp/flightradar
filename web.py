@@ -12,7 +12,8 @@ from updateThread import UpdaterThread
 
 app = Flask(__name__)
 
-adsb_config = Config('config.json')
+adsb_config = Config()
+adsb_config.from_file('config.json')
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")        
 
 updater = UpdaterThread(adsb_config)

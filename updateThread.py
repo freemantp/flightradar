@@ -54,8 +54,9 @@ class UpdaterThread(threading.Thread):
         timestamp = time.time()
 
         if position:
-            self._entries[icao24].last_seen = timestamp
-            self._entries[icao24].pos.append(position)
+            if not self._entries[icao24].pos or self._entries[icao24].pos[-1] != position:
+                self._entries[icao24].pos.append(position)
+                self._entries[icao24].last_seen = self._entries[icao24].first_seen
         else:
             self._entries[icao24].last_seen = timestamp
 
@@ -72,7 +73,7 @@ class UpdaterThread(threading.Thread):
                     if entry[1][0] and entry[1][1]:
                         self.update_data(icao24, entry[1])
 
-            time.sleep(2)
+            time.sleep(1)
             self.cleanup_items()
 
         print("interupted")
