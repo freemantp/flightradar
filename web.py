@@ -41,7 +41,9 @@ def index():
         aircraft = bs_db.query_aircraft(entry[0])
 
         if aircraft:
-            response.append((aircraft.__dict__, time.ctime(entry[1].first_seen)))
+            response.append((aircraft.__dict__, time.ctime(entry[1].last_seen)))
+
+        response.sort(key=lambda tup: tup[1],reverse=True)
 
     return render_template('aircraft.html', airplanes=response)
 
