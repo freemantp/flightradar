@@ -338,26 +338,20 @@
       var styledMapType = new google.maps.StyledMapType(styles, { name: 'Styled' });
       map.mapTypes.set('Styled', styledMapType);
 
-      var flightPath = null;
+      var flightPaths = [];
 
       var lineSymbol = {
             path: google.maps.SymbolPath.CIRCLE
       };
 
-      function update_func() {
-        $.getJSON("../pos/" + icao, function (data) {
+      function create_path(data) {
 
-          var positions = []
-
+        var positions = []
           for (var i in data) {
             positions.push({ lat: data[i][0], lng: data[i][1] })
           }
 
-          if (flightPath) {
-            flightPath.setMap(null);
-          }
-
-          flightPath = new google.maps.Polyline({
+        fp = new google.maps.Polyline({
             path: positions,
             geodesic: true,
             strokeColor: '#FF0000',
@@ -369,13 +363,52 @@
             }]
           });
 
-          flightPath.setMap(map);
+          fp.setMap(map);
+          return fp;
+      }
+
+      function update_single() {
+        $.getJSON("../pos/" + icao, function (data) {
+
+          //clear old paths
+          for(i in flightPaths) {
+            flightPaths[i].setMap(null);
+          }
+          flightPaths =  []
+
+          fp = create_path(data)          
+          flightPaths.push(fp);
 
         });
       }
 
-      update_func();
-      var refresh = setInterval(update_func, 1000);
+      function update_bulk() {
+        $.getJSON("../positions", function (data) {
+
+          //clear old paths
+          for(i in flightPaths) {
+            flightPaths[i].setMap(null);
+          }
+          flightPaths =  []
+
+          for(i in data) {
+
+
+
+            fp = create_path(data[i][1])          
+            flightPaths.push(fp);
+          }
+        });
+      }
+
+      if(icao.length >0 ) {
+        update_single();
+        var refresh = setInterval(update_single, 1000);
+      } else {
+        update_bulk();
+        var refresh = setInterval(update_bulk, 1000);
+      }
+
       
     }
   </script>
