@@ -62,6 +62,7 @@ def update_live_from_fr24():
                     if fr24aircraft:
                         aircraft.merge(fr24aircraft)
                         updated = bs_db.update_aircraft(aircraft)
+                        global update_count
                         update_count += 1
                         print("%s  - updated=%s" % (aircraft,updated))
                     else:
@@ -72,8 +73,9 @@ def update_live_from_fr24():
                 fr24_queried.add(hex)
                 if fr24aircraft:
                     inserted = bs_db.insert_aircraft(fr24aircraft)
+                    global insert_count
                     insert_count += 1
-                    print("%s  - inserted=%s" % (fr24aircraft,inserted))
+                    print("%s  - inserted=%s" % (fr24aircraft, inserted))
 
         #print("sleeping")
         time.sleep(20)
