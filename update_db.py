@@ -24,9 +24,11 @@ insert_count = 0
 def signal_handler(signal, frame):
         print('You pressed Ctrl+C!')
         print('updated: %d, inserted: %d ' % (update_count,insert_count) )
-        print('not found: ')
-        for hex in not_found:
-            print("\t" + hex)
+
+        if not_found:
+            print('not found: ')
+            for hex in not_found:
+                print("\t" + hex)
 
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
@@ -44,8 +46,6 @@ def update_live_from_fr24():
     msm = ModeSMixer(host, port)
 
     while True:
-
-        print("quering modesmixer")
         live_aircraft = msm.query_live_icao24()
         #print("got %d live ones" % len(live_aircraft))
         for hex in live_aircraft:
