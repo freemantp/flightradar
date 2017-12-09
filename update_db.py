@@ -18,10 +18,15 @@ bs_db = BaseStationDB(dataFolder + "BaseStation.sqb")
 fr24_queried = set()
 not_found = set()
 
+update_count = 0
+insert_count = 0
+
 def signal_handler(signal, frame):
         print('You pressed Ctrl+C!')
+        print('updated: %d, inserted: %d ' % (update_count,insert_count) )
+        print('not found: ')
         for hex in not_found:
-            print(hex)
+            print("\t"hex)
 
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
@@ -42,7 +47,7 @@ def update_live_from_fr24():
 
         print("quering modesmixer")
         live_aircraft = msm.query_live_icao24()
-        print("got %d live ones" % len(live_aircraft))
+        #print("got %d live ones" % len(live_aircraft))
         for hex in live_aircraft:
 
             aircraft = bs_db.query_aircraft(hex)
@@ -57,6 +62,7 @@ def update_live_from_fr24():
                     if fr24aircraft:
                         aircraft.merge(fr24aircraft)
                         updated = bs_db.update_aircraft(aircraft)
+                        update_count += 1
                         print("%s  - updated=%s" % (aircraft,updated))
                     else:
                         not_found.add(hex)
@@ -66,9 +72,10 @@ def update_live_from_fr24():
                 fr24_queried.add(hex)
                 if fr24aircraft:
                     inserted = bs_db.insert_aircraft(fr24aircraft)
+                    insert_count += 1
                     print("%s  - inserted=%s" % (fr24aircraft,inserted))
 
-        print("sleeping")
+        #print("sleeping")
         time.sleep(20)
 
 def read_csv():
