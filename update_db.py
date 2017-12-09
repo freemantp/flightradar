@@ -26,7 +26,7 @@ def signal_handler(signal, frame):
         print('updated: %d, inserted: %d ' % (update_count,insert_count) )
         print('not found: ')
         for hex in not_found:
-            print("\t"hex)
+            print("\t" + hex)
 
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
