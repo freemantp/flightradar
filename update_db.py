@@ -48,34 +48,36 @@ def update_live_from_fr24():
     while True:
         live_aircraft = msm.query_live_icao24()
         #print("got %d live ones" % len(live_aircraft))
-        for hex in live_aircraft:
 
-            aircraft = bs_db.query_aircraft(hex)
+        if live_aircraft:
+            for hex in live_aircraft:
 
-            if aircraft and not aircraft.is_complete():
+                aircraft = bs_db.query_aircraft(hex)
 
-                if hex not in fr24_queried:
-                    print("quering fr24 for %s" % hex)
+                if aircraft and not aircraft.is_complete():
+
+                    if hex not in fr24_queried:
+                        print("quering fr24 for %s" % hex)
+                        fr24aircraft = fr24.query_aircraft(hex)
+                        fr24_queried.add(hex)
+                        print("fr24: %s" % fr24aircraft)
+                        if fr24aircraft:
+                            aircraft.merge(fr24aircraft)
+                            updated = bs_db.update_aircraft(aircraft)
+                            global update_count
+                            update_count += 1
+                            print("%s  - updated=%s" % (aircraft,updated))
+                        else:
+                            not_found.add(hex)
+
+                if not aircraft:
                     fr24aircraft = fr24.query_aircraft(hex)
                     fr24_queried.add(hex)
-                    print("fr24: %s" % fr24aircraft)
                     if fr24aircraft:
-                        aircraft.merge(fr24aircraft)
-                        updated = bs_db.update_aircraft(aircraft)
-                        global update_count
-                        update_count += 1
-                        print("%s  - updated=%s" % (aircraft,updated))
-                    else:
-                        not_found.add(hex)
-
-            if not aircraft:
-                fr24aircraft = fr24.query_aircraft(hex)
-                fr24_queried.add(hex)
-                if fr24aircraft:
-                    inserted = bs_db.insert_aircraft(fr24aircraft)
-                    global insert_count
-                    insert_count += 1
-                    print("%s  - inserted=%s" % (fr24aircraft, inserted))
+                        inserted = bs_db.insert_aircraft(fr24aircraft)
+                        global insert_count
+                        insert_count += 1
+                        print("%s  - inserted=%s" % (fr24aircraft, inserted))
 
         #print("sleeping")
         time.sleep(20)

@@ -66,12 +66,12 @@ class UpdaterThread(threading.Thread):
 
             positions = self._mm2.query_live_positions()
 
-            for entry in positions:
-                icao24 = entry[0]
-
-                if self._mil_ranges.is_military(icao24):
-                    if entry[1][0] and entry[1][1]:
-                        self.update_data(icao24, entry[1])
+            if positions:
+                for entry in positions:
+                    icao24 = entry[0]
+                    if self._mil_ranges.is_military(icao24):
+                        if entry[1][0] and entry[1][1]:
+                            self.update_data(icao24, entry[1])
 
             time.sleep(1)
             self.cleanup_items()

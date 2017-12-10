@@ -44,7 +44,7 @@ def index():
         if aircraft:
             response.append((aircraft.__dict__, time.ctime(entry[1].last_seen)))
 
-        response.sort(key=lambda tup: tup[1],reverse=True)
+        response.sort(key=lambda tup: tup[1], reverse=True)
 
     return render_template('aircraft.html', airplanes=response)
 

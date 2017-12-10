@@ -11,9 +11,9 @@ class Flightradar24:
     def __init__(self):
 
         self.conn = HTTPSConnection("api.flightradar24.com")
-        self.headers = { 
+        self.headers = {
             'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0',
-            "Content-type": "application/json", 
+            "Content-type": "application/json",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
@@ -50,8 +50,8 @@ class Flightradar24:
                     failcounter += 1
                     res.read()
 
-                    print('402, sleeping for {}sec'.format( self.timeout ) )
-                    time.sleep( self.timeout)
+                    #print('402, sleeping for {}sec'.format( self.timeout ) )
+                    time.sleep(self.timeout)
                     self.timeout += 1
                 else:
                     res.read()
@@ -64,5 +64,8 @@ class Flightradar24:
                 failcounter += 1
                 time.sleep(failcounter * 3)
                 print("error, waiting some time")
+
+        if failcounter == self.maxretires:
+            print("Too many failures for %s, giving up" % mode_s_hex)
 
         return None
