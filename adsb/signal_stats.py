@@ -9,12 +9,11 @@ oldValue = 0
 
 buf = collections.deque(maxlen=5)
 
-
 def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
 
-maxV = 0;
-minV = 99999999;
+maxV = 0
+minV = 99999999
 
 while(True):
     r = requests.post('http://192.168.0.40:8081/json', data = payload)
@@ -35,9 +34,4 @@ while(True):
 
     oldValue = numMessages
 
-
-
-    
-
-    
     time.sleep(secondsInterval)

@@ -1,6 +1,5 @@
 from http.client import HTTPConnection
 from base64 import b64encode
-from .aircraft import Aircraft
 
 import json
 
@@ -15,7 +14,6 @@ class ModeSMixer:
         self.epoch = 0
 
         self.headers = {
-            'Authorization' : 'Basic %s' %  b64encode(b"user:pwdhere").decode("ascii"),
             "Content-type": "application/json", "Accept": "*/*"
         }
 
@@ -40,10 +38,10 @@ class ModeSMixer:
             return flights
         except ConnectionRefusedError as cre:
             print(cre)
-            return None
         except OSError as e:
             print(e)
-            return None
+        
+        return None
 
     def query_live_icao24(self): 
 

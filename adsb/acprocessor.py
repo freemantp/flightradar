@@ -2,6 +2,7 @@ import threading
 import time
 
 from adsb.modesmixer import ModeSMixer
+from adsb.virtualradarserver import VirtualRadarServer
 from adsb.military import MilRanges
 
 class AircraftEntry:
@@ -17,7 +18,13 @@ class AircaftProcessor(threading.Thread):
 
         threading.Thread.__init__(self)
 
-        self._mm2 = ModeSMixer(config.service_host_name, config.service_port)
+        if config.type == 'mm2':
+            self._service = ModeSMixer(config.service_host_name, config.service_port)
+        elif config.type == 'vrs':
+            self._service = VirtualRadarServer(config.service_host_name, config.service_port)
+        else:
+            raise ValueError('Service type not specified in config')
+
         self._mil_ranges = MilRanges(config.data_folder)
         self.interrupted = False
         self._entries = dict()
@@ -64,7 +71,7 @@ class AircaftProcessor(threading.Thread):
 
         while not self.interrupted:
 
-            positions = self._mm2.query_live_positions()
+            positions = self._service.query_live_positions()
 
             if positions:
                 for entry in positions:

@@ -9,6 +9,7 @@ class Config():
         self.service_host_name = ''
         self.service_port = ''
         self.military_only = False
+        self.type = 'mm2'
 
     def from_file(self, filename):
         with open(filename, 'r') as json_file:
