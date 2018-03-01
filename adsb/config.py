@@ -6,13 +6,16 @@ class Config():
 
     def __init__(self):
         self.data_folder = ''
-        self.host = ''
-        self.port = ''
+        self.service_host_name = ''
+        self.service_port = ''
+        self.military_only = False
 
     def from_file(self, filename):
         with open(filename, 'r') as json_file:
             config = json.load(json_file)
             self.data_folder = config['dataFolder']
-            self.host = config['host']
-            self.port = config['port']
+            self.service_host_name = config['serviceHostName']
+            self.service_port = config['servicePort']
+            self.type = config['type']
+            self.military_only = config['militaryOnly']
     

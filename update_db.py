@@ -10,8 +10,8 @@ import json
 with open('config.json', 'r') as jf:
     config = json.load(jf)
     dataFolder = config['dataFolder']
-    host = config['host']
-    port = config['port']
+    host = config['serviceHostName']
+    port = config['servicePort']
 
 bs_db = BaseStationDB(dataFolder + "BaseStation.sqb")
 
@@ -83,7 +83,7 @@ def update_live_from_fr24():
         time.sleep(20)
 
 def read_csv():
-    for plane in Tabular.parse_csv(rdataFolder + r'\\Mil.csv'):
+    for plane in Tabular.parse_csv(dataFolder + r'\\Mil.csv'):
         aircraft = bs_db.query_aircraft(plane.modes_hex)
         if aircraft:
             if not aircraft.is_complete():

@@ -11,17 +11,17 @@ class AircraftEntry:
         self.last_seen = self.first_seen
         self.pos = []
 
-
-class UpdaterThread(threading.Thread):
+class AircaftProcessor(threading.Thread):
 
     def __init__(self, config):
 
         threading.Thread.__init__(self)
 
-        self._mm2 = ModeSMixer(config.host, config.port)
+        self._mm2 = ModeSMixer(config.service_host_name, config.service_port)
         self._mil_ranges = MilRanges(config.data_folder)
         self.interrupted = False
         self._entries = dict()
+        self._mil_only = config.military_only
 
     def get_active_icaos(self):
         return self._entries.keys()
@@ -69,7 +69,7 @@ class UpdaterThread(threading.Thread):
             if positions:
                 for entry in positions:
                     icao24 = entry[0]
-                    if self._mil_ranges.is_military(icao24):
+                    if not self._mil_only or (self._mil_only and self._mil_ranges.is_military(icao24)):
                         if entry[1][0] and entry[1][1]:
                             self.update_data(icao24, entry[1])
 

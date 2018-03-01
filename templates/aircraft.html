@@ -1,7 +1,12 @@
 <html>
     <head>
-        <title>Aircraft</title>
+        <title>Aircraft</title>       
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+        <style>
+            .badge-silhouette {
+            background-color: #D9EBF9;
+            }
+        </style>
     </head>
     <body>
         <div class="container">
@@ -21,7 +26,7 @@
             <tbody>
                 {% for ap in airplanes %}
                 <tr>
-                    <td><img src="https://radar.domain.org/img/silhouettes/{{ ap[0]['type1']}}.bmp"</td>
+                    <td><span class="badge badge-silhouette"><img src="https://radar.domain.org/img/silhouettes/{{ ap[0]['type1']}}.bmp"></span></td>
                     <td>{{ ap[0]['modes_hex']}}</td>
                     <td>{{ ap[0]['reg'] }}</td>
                     <td>{{ ap[0]['type1'] }}</td>
@@ -33,5 +38,11 @@
                 {% endfor %}
         </tbody>  
         </table>
+        <p>Connection to {{status.mode}}: 
+                {%if status.alive %}
+                <span class="badge badge-success">alive</span>
+                {% else %}
+                <span class="badge badge-danger">dead</span>
+                {% endif %}</p>
     </body>
 </html>

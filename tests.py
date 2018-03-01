@@ -1,6 +1,6 @@
 import unittest
 
-from updateThread import UpdaterThread
+from acprocessor import AircaftProcessor
 from adsb.config import Config
 
 class TestADSB(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestADSB(unittest.TestCase):
 
         conf = Config()
         conf.from_file('config.json')
-        updater = UpdaterThread(conf)
+        updater = AircaftProcessor(conf)
 
         icao = 'AB2345'
 

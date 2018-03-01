@@ -7,8 +7,7 @@ from flask import jsonify
 
 from adsb.config import Config
 from adsb.basestationdb import BaseStationDB
-
-from updateThread import UpdaterThread
+from adsb.acprocessor import AircaftProcessor
 
 app = Flask(__name__)
 
@@ -16,7 +15,7 @@ adsb_config = Config()
 adsb_config.from_file('config.json')
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")        
 
-updater = UpdaterThread(adsb_config)
+updater = AircaftProcessor(adsb_config)
 updater.start()
 
 @app.route("/api")
@@ -46,7 +45,12 @@ def index():
 
         response.sort(key=lambda tup: tup[1], reverse=True)
 
-    return render_template('aircraft.html', airplanes=response)
+    statusInfo = {
+        'alive' :  updater.isAlive(),
+        'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'
+    }
+    
+    return render_template('aircraft.html', airplanes=response, status=statusInfo)
 
 @app.route("/pos/<icao24>") 
 def get_positions(icao24):
@@ -89,7 +93,6 @@ def get_map(icao24):
 @app.route("/map") 
 def get_map_all():
     return render_template('map.html', icao24='')
-
 
 @app.after_request
 def after_request(response):

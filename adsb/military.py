@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     def run_live():
         while True:
-            msm = ModeSMixer(app_cfg.host, app_cfg.port)
+            msm = ModeSMixer(app_cfg.service_host_name, app_cfg.service_port)
 
             for line in msm.query_live_icao24():
                 handle_ac(line.strip())

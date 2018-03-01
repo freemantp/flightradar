@@ -1,8 +1,8 @@
 from http.client import HTTPConnection
-import json
 from base64 import b64encode
-
 from .aircraft import Aircraft
+
+import json
 
 class ModeSMixer:
 
@@ -10,8 +10,8 @@ class ModeSMixer:
 
     def __init__(self, host, port):
 
-        self.host = host
-        self.port = port
+        self.service_host_name = host
+        self.service_port = port
         self.epoch = 0
 
         self.headers = {
@@ -26,7 +26,7 @@ class ModeSMixer:
         try:
             msg_body = self.body % (0 if force_initial else self.epoch)
 
-            conn = HTTPConnection(self.host, self.port)
+            conn = HTTPConnection(self.service_host_name, self.service_port)
             conn.request('POST', '/json', body=msg_body, headers=self.headers)
             res = conn.getresponse()
             data = res.read()  
@@ -38,9 +38,12 @@ class ModeSMixer:
 
             conn.close()
             return flights
-        except ConnectionRefusedError:
+        except ConnectionRefusedError as cre:
+            print(cre)
             return None
-
+        except OSError as e:
+            print(e)
+            return None
 
     def query_live_icao24(self): 
 
