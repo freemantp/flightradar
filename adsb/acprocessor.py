@@ -11,6 +11,7 @@ class AircraftEntry:
         self.first_seen = time.time()
         self.last_seen = self.first_seen
         self.pos = []
+        self._service = None
 
 class AircaftProcessor(threading.Thread):
 
@@ -38,6 +39,9 @@ class AircaftProcessor(threading.Thread):
 
     def get_entry(self, icao24):
         return self._entries[icao24] if icao24 in self._entries else None
+
+    def is_service_alive(self):
+        return self._service.connection_alive
 
     def cleanup_items(self):
 

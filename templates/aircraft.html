@@ -9,6 +9,8 @@
         </style>
     </head>
     <body>
+        
+                    {%if not status.updaterAlive %}<div class="alert alert-danger" role="alert">Updater thread is dead</div>{% endif %}
         <div class="container">
         <table class="table table-striped" width="500px">
             <thead>
@@ -39,7 +41,7 @@
         </tbody>  
         </table>
         <p>Connection to {{status.mode}}: 
-                {%if status.alive %}
+                {%if status.serviceAlive %}
                 <span class="badge badge-success">alive</span>
                 {% else %}
                 <span class="badge badge-danger">dead</span>

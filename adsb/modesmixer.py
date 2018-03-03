@@ -11,6 +11,7 @@ class ModeSMixer:
 
         self.service_host_name = host
         self.service_port = port
+        self.conn = HTTPConnection(self.service_host_name, self.service_port)
         self.epoch = 0
 
         self.headers = {
@@ -18,29 +19,33 @@ class ModeSMixer:
         }
 
         self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
+        self.connection_alive = True
+
+    def __del__(self):
+        self.conn.close()
 
     def get_flight_info(self, force_initial=False):
 
         try:
             msg_body = self.body % (0 if force_initial else self.epoch)
-
-            conn = HTTPConnection(self.service_host_name, self.service_port)
-            conn.request('POST', '/json', body=msg_body, headers=self.headers)
-            res = conn.getresponse()
+         
+            self.conn.request('POST', '/json', body=msg_body, headers=self.headers)
+            res = self.conn.getresponse()
             data = res.read()  
 
             json_obj = json.loads(data.decode())
 
             flights = json_obj['stats']['flights']
-            self.epoch = json_obj['stats']['epoch']
-
-            conn.close()
+            self.epoch = json_obj['stats']['epoch']        
+            self.connection_alive = True
             return flights
+
         except ConnectionRefusedError as cre:
             print(cre)
         except OSError as e:
             print(e)
         
+        self.connection_alive = False
         return None
 
     def query_live_icao24(self): 

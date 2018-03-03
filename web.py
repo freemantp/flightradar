@@ -46,7 +46,8 @@ def index():
         response.sort(key=lambda tup: tup[1], reverse=True)
 
     statusInfo = {
-        'alive' :  updater.isAlive(),
+        'updaterAlive' :  updater.isAlive(),
+        'serviceAlive' : updater.is_service_alive(),
         'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'
     }
     

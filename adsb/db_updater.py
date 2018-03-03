@@ -4,8 +4,6 @@ import json
 from .modesmixer import ModeSMixer
 from .basestationdb import BaseStationDB
 from .flightradar24 import Flightradar24
-#import Util.Tabular
-
 
 class DbUpdater:
 
