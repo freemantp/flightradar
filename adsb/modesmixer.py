@@ -1,25 +1,32 @@
-from http.client import HTTPConnection
+from http.client import HTTPConnection, HTTPSConnection
 from base64 import b64encode
+from urllib.parse import urlparse
 
 import json
+
 
 class ModeSMixer:
 
     """ ModeSMixer Queries """
 
-    def __init__(self, host, port):
+    def __init__(self, url):
 
-        self.service_host_name = host
-        self.service_port = port
-        self.conn = HTTPConnection(self.service_host_name, self.service_port)
-        self.epoch = 0
+        self._url_parms = urlparse(url)
 
+        if self._url_parms.scheme == 'http':
+            self.conn = HTTPConnection(self._url_parms.netloc)
+        elif self._url_parms.scheme == 'https':
+            self.conn = HTTPSConnection(self._url_parms.netloc)
+        else:
+            raise ValueError('Invalid protocol in service url')
+
+        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
         self.headers = {
             "Content-type": "application/json", "Accept": "*/*"
         }
 
-        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
         self.connection_alive = True
+        self.epoch = 0
 
     def __del__(self):
         self.conn.close()
@@ -28,15 +35,16 @@ class ModeSMixer:
 
         try:
             msg_body = self.body % (0 if force_initial else self.epoch)
-         
-            self.conn.request('POST', '/json', body=msg_body, headers=self.headers)
+
+            self.conn.request('POST', self._url_parms.path +
+                              '/json', body=msg_body, headers=self.headers)
             res = self.conn.getresponse()
-            data = res.read()  
+            data = res.read()
 
             json_obj = json.loads(data.decode())
 
             flights = json_obj['stats']['flights']
-            self.epoch = json_obj['stats']['epoch']        
+            self.epoch = json_obj['stats']['epoch']
             self.connection_alive = True
             return flights
 
@@ -44,11 +52,11 @@ class ModeSMixer:
             print(cre)
         except OSError as e:
             print(e)
-        
+
         self.connection_alive = False
         return None
 
-    def query_live_icao24(self): 
+    def query_live_icao24(self):
 
         flight_data = self.get_flight_info()
 
@@ -63,7 +71,6 @@ class ModeSMixer:
             return None
 
     def query_live_positions(self):
-
         """ Returns a list of Mode-S adresses with current position information"""
 
         flight_data = self.get_flight_info()
@@ -83,3 +90,9 @@ class ModeSMixer:
             return flights
         else:
             return None
+
+    def get_silhouete_params(self):
+        return {
+            'prefix': "{:s}/img/silhouettes/".format(self._url_parms.geturl()),
+            'suffix': ".bmp"
+        }

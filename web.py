@@ -48,10 +48,10 @@ def index():
     statusInfo = {
         'updaterAlive' :  updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
-        'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'
-    }
+        'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'     
+    }    
     
-    return render_template('aircraft.html', airplanes=response, status=statusInfo)
+    return render_template('aircraft.html', airplanes=response, status=statusInfo, silhouette=updater.get_silhouete_params())
 
 @app.route("/pos/<icao24>") 
 def get_positions(icao24):

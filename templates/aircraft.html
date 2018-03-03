@@ -28,7 +28,7 @@
             <tbody>
                 {% for ap in airplanes %}
                 <tr>
-                    <td><span class="badge badge-silhouette"><img src="https://radar.domain.org/img/silhouettes/{{ ap[0]['type1']}}.bmp"></span></td>
+                    <td><span class="badge badge-silhouette"><img src="{{silhouette.prefix}}{{ ap[0]['type1']}}{{silhouette.suffix}}"></span></td>
                     <td>{{ ap[0]['modes_hex']}}</td>
                     <td>{{ ap[0]['reg'] }}</td>
                     <td>{{ ap[0]['type1'] }}</td>

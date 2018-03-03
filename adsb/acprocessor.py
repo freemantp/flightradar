@@ -20,9 +20,9 @@ class AircaftProcessor(threading.Thread):
         threading.Thread.__init__(self)
 
         if config.type == 'mm2':
-            self._service = ModeSMixer(config.service_host_name, config.service_port)
+            self._service = ModeSMixer(config.service_url)
         elif config.type == 'vrs':
-            self._service = VirtualRadarServer(config.service_host_name, config.service_port)
+            self._service = VirtualRadarServer(config.service_url)
         else:
             raise ValueError('Service type not specified in config')
 
@@ -91,3 +91,6 @@ class AircaftProcessor(threading.Thread):
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
+
+    def get_silhouete_params(self):
+        return self._service.get_silhouete_params()

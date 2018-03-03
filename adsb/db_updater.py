@@ -16,7 +16,7 @@ class DbUpdater:
         bs_db = BaseStationDB(config.data_folder + "BaseStation.sqb")
 
         fr24 = Flightradar24()
-        msm = ModeSMixer(config.service_host_name, config.service_port)
+        msm = ModeSMixer(config.service_url)
 
         while True:
 

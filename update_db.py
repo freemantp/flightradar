@@ -1,19 +1,18 @@
 from adsb.flightradar24 import Flightradar24
 from adsb.modesmixer import ModeSMixer
+from adsb.virtualradarserver import VirtualRadarServer
 from adsb.basestationdb import BaseStationDB
 from adsb.tabular import Tabular
+from adsb.config import Config
 import time
 import signal
 import sys
 import json
 
-with open('config.json', 'r') as jf:
-    config = json.load(jf)
-    dataFolder = config['dataFolder']
-    host = config['serviceHostName']
-    port = config['servicePort']
+adsb_config = Config()
+adsb_config.from_file('config.json')
 
-bs_db = BaseStationDB(dataFolder + "BaseStation.sqb")
+bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
 fr24_queried = set()
 not_found = set()
@@ -43,7 +42,11 @@ def is_swiss(icaohex):
 def update_live_from_fr24():
 
     fr24 = Flightradar24()
-    msm = ModeSMixer(host, port)
+
+    if adsb_config.type == 'mm2':
+        msm = ModeSMixer(adsb_config.service_url)
+    else:
+         raise ValueError('Service type {:s} is not supported'.format(adsb_config.type))
 
     while True:
         live_aircraft = msm.query_live_icao24()
@@ -83,7 +86,7 @@ def update_live_from_fr24():
         time.sleep(20)
 
 def read_csv():
-    for plane in Tabular.parse_csv(dataFolder + r'\\Mil.csv'):
+    for plane in Tabular.parse_csv(adsb_config.data_folder + r'\\Mil.csv'):
         aircraft = bs_db.query_aircraft(plane.modes_hex)
         if aircraft:
             if not aircraft.is_complete():
