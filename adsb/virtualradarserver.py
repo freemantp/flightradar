@@ -1,70 +1,56 @@
-from http.client import HTTPConnection, HTTPSConnection
-from base64 import b64encode
-from urllib.parse import urlparse
-
+from adsb.radarservice import RadarService
 import json
 
-
-class VirtualRadarServer:
+class VirtualRadarServer(RadarService):
 
     """ VirtualRadarServer Queries """
 
     def __init__(self, url):
-
-        self._url_parms = urlparse(url)
-
-        if self._url_parms.scheme == 'http':
-            self.conn = HTTPConnection(self._url_parms.netloc)
-        elif self._url_parms.scheme == 'https':
-            self.conn = HTTPSConnection(self._url_parms.netloc)
-        else:
-            raise ValueError('Invalid protocol in service url')
-
-        self.headers = {
-            "Accept": "application/json"
-        }
-
-        self.connection_alive = True
-
-    def __del__(self):
-        self.conn.close()
+        RadarService.__init__(self, url) 
 
     def query_live_positions(self):
         """ Returns a list of Mode-S adresses with current position information"""
 
-        try:
+        conn = self.get_connection()
 
-            self.conn.request('POST', self._url_parms.path +
+        try:
+            conn.request('POST', self._url_parms.path +
                               '/AircraftList.json', headers=self.headers)
-            res = self.conn.getresponse()
+            res = conn.getresponse()
             data = res.read()
 
-            if data:
-                json_data = json.loads(data.decode())
+            if res.code == 200:
+                if data:
+                    json_data = json.loads(data.decode())
 
-                flights = []
+                    flights = []
 
-                for acjsn in json_data['acList']:
+                    for acjsn in json_data['acList']:
 
-                    icao24 = str(acjsn['Icao'])
-                    lat = acjsn['Lat'] if 'Lat' in acjsn and acjsn['Lat'] else None
-                    lon = acjsn['Long'] if 'Long' in acjsn and acjsn['Long'] else None
-                    alt = acjsn['Alt'] if 'Alt' in acjsn and acjsn['Alt'] else None
+                        icao24 = str(acjsn['Icao'])
+                        lat = acjsn['Lat'] if 'Lat' in acjsn and acjsn['Lat'] else None
+                        lon = acjsn['Long'] if 'Long' in acjsn and acjsn['Long'] else None
+                        alt = acjsn['Alt'] if 'Alt' in acjsn and acjsn['Alt'] else None
 
-                    if lat and lon or alt:
-                        flights.append((icao24, (lat, lon, alt)))
+                        if lat and lon or alt:
+                            flights.append((icao24, (lat, lon, alt)))
 
-                self.connection_alive = True
-                return flights
-
+                    self.connection_alive = True
+                    return flights
+                
+                else:
+                    print("Request to {:s} failed".format(
+                        self._url_parms.geturl()))
             else:
-                print("Request to {:s} failed".format(
-                    self._url_parms.geturl()))
+                print("[VRS] unexpected HTTP response: {:d}".format(res.code))
 
         except ConnectionRefusedError as cre:
             print(cre)
         except OSError as e:
             print(e)
+
+        if conn:
+            conn.close()    
         self.connection_alive = False
         return None
 
