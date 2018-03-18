@@ -53,6 +53,9 @@ class Flightradar24:
                     #print('402, sleeping for {}sec'.format( self.timeout ) )
                     time.sleep(self.timeout)
                     self.timeout += 1
+                elif res.status >= 500 and res.status < 600:
+                     res.read()
+                     time.sleep(20)               
                 else:
                     res.read()
                     raise ValueError('Unexpected http code: %s' % res.status)

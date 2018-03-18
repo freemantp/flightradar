@@ -1,6 +1,6 @@
 import unittest
 
-from acprocessor import AircaftProcessor
+from adsb.acprocessor import AircaftProcessor
 from adsb.config import Config
 
 class TestADSB(unittest.TestCase):

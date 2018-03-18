@@ -5,6 +5,7 @@
 1. Make sure you have Python 3 installed, on Raspbian check with
 ```python3 --version```
 1. Install the python flask package with ```pip3 install flask```
+1. Install the peewee package with ```pip3 install peewee```
 
 ## Configuration
 

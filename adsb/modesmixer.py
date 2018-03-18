@@ -78,7 +78,7 @@ class ModeSMixer(RadarService):
                     alt = flight['A'] if 'A' in flight and flight['A'] else None
 
                     if lat and lon or alt:
-                        flights.append((icao24, (lat, lon, alt)))
+                        flights.append((icao24, lat, lon, alt))
             return flights
         else:
             return None

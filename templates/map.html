@@ -385,6 +385,8 @@
       function update_bulk() {
         $.getJSON("../positions", function (data) {
 
+          
+
           //clear old paths
           for(i in flightPaths) {
             flightPaths[i].setMap(null);
@@ -392,10 +394,7 @@
           flightPaths =  []
 
           for(i in data) {
-
-
-
-            fp = create_path(data[i][1])          
+            fp = create_path(data[i])          
             flightPaths.push(fp);
           }
         });

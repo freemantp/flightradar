@@ -1,21 +1,17 @@
 import threading
 import time
+import datetime
 
 from adsb.modesmixer import ModeSMixer
 from adsb.virtualradarserver import VirtualRadarServer
 from adsb.military import MilRanges
 
-class AircraftEntry:
-
-    def __init__(self):
-        self.first_seen = time.time()
-        self.last_seen = self.first_seen
-        self.pos = []
-        self._service = None
+from adsb.dbmodels  import Position
+from peewee import IntegrityError
 
 class AircaftProcessor(threading.Thread):
 
-    def __init__(self, config):
+    def __init__(self, config, db):
 
         threading.Thread.__init__(self)
 
@@ -28,48 +24,21 @@ class AircaftProcessor(threading.Thread):
 
         self._mil_ranges = MilRanges(config.data_folder)
         self.interrupted = False
-        self._entries = dict()
         self._mil_only = config.military_only
-
-    def get_active_icaos(self):
-        return self._entries.keys()
-
-    def get_active_entries(self):
-        return self._entries.items()
-
-    def get_entry(self, icao24):
-        return self._entries[icao24] if icao24 in self._entries else None
+        self._db = db
+        self.delete_after = config.delete_after
 
     def is_service_alive(self):
         return self._service.connection_alive
 
     def cleanup_items(self):
-
-        now = time.time()
-        to_delete = []
-
-        for item in self._entries.items():
-            delta = int(now - item[1].last_seen)
-            if delta > 86400: #24h
-                to_delete.append(item[0])
-
-        for icao24 in to_delete:
-            self._entries.pop(icao24)
-            print("cleaned %s" % icao24)
-
-    def update_data(self, icao24, position=None):
-
-        if icao24 not in self._entries:
-            self._entries[icao24] = AircraftEntry()
-
-        timestamp = time.time()
-
-        if position:
-            if not self._entries[icao24].pos or self._entries[icao24].pos[-1] != position:
-                self._entries[icao24].pos.append(position)
-                self._entries[icao24].last_seen = self._entries[icao24].first_seen
-        else:
-            self._entries[icao24].last_seen = timestamp
+        
+        threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
+        query = (Position.delete()
+                .where(Position.timestmp <  threshold_data) )
+        num_records_deleted = query.execute()
+        if num_records_deleted > 0:
+            print('Deleting {:d} old records from the datbase'.format(num_records_deleted))
 
     def run(self):
 
@@ -78,14 +47,22 @@ class AircaftProcessor(threading.Thread):
             positions = self._service.query_live_positions()
 
             if positions:
-                for entry in positions:
-                    icao24 = entry[0]
-                    if not self._mil_only or (self._mil_only and self._mil_ranges.is_military(icao24)):
-                        if entry[1][0] and entry[1][1]:
-                            self.update_data(icao24, entry[1])
 
-            time.sleep(1)
+                # Filter for military icaos
+                if self._mil_only:
+                    positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+
+                # Filter out empty positons
+                pos_array = list(filter(lambda p : p[1] and p[2], positions))
+
+                if pos_array:
+                    with self._db.atomic():
+                        fields = [Position.icao, Position.lat, Position.lon, Position.alt]
+                        Position.insert_many(pos_array, fields=fields).execute()
+                                
             self.cleanup_items()
+            time.sleep(1)
+            
 
         print("interupted")
 

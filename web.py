@@ -4,23 +4,56 @@ from flask import Flask
 from flask import Response
 from flask import render_template
 from flask import jsonify
+from flask import g
+
+from peewee import SqliteDatabase, fn
 
 from adsb.config import Config
 from adsb.basestationdb import BaseStationDB
 from adsb.acprocessor import AircaftProcessor
+from adsb.dbmodels import Position, database_proxy
+
+def get_config():
+    conf = getattr(g, '_config', None)
+    if conf is None:
+        conf = Config()
+        conf.from_file('config.json')
+        g._config = conf
+    return conf
+
+def get_basestation_db():
+    basestation_db = getattr(g, '_basestation_db', None)
+    if basestation_db is None:
+        config = get_config()
+        basestation_db = g._basestation_db = BaseStationDB(config.data_folder + "BaseStation.sqb")
+    return basestation_db
+
+def get_position_db():
+    position_db = getattr(g, '_position_db', None)
+    if position_db is None:
+        conf = getattr(g, '_config', None)
+        position_db =  SqliteDatabase('{:s}/positions.db'.format(conf.data_folder))
+        database_proxy.initialize(position_db)
+        position_db.create_tables([Position]) #init db
+
+    return position_db      
 
 app = Flask(__name__)
 
-adsb_config = Config()
-adsb_config.from_file('config.json')
-bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")        
+pos_db = None
 
-updater = AircaftProcessor(adsb_config)
-updater.start()
+# Set up background threads
+with app.app_context():
+    adsb_config = get_config()
+    pos_db = get_position_db()
+    updater = AircaftProcessor(adsb_config,pos_db)
+    updater.start()
 
 @app.route("/api")
 def rest_api():
     response = []
+
+    bs_db = get_basestation_db()
 
     for icao24, tmstmp in updater.aircraft.items():
         aircraft = bs_db.query_aircraft(icao24)
@@ -35,18 +68,21 @@ def index():
 
     response = []
 
-    #for icao24, tmstmp in updater.aircraft.items():
-    for entry in updater.get_active_entries():
+    query = (Position
+         .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
+         .group_by(Position.icao)
+         .order_by(fn.MAX(Position.timestmp).desc()))
 
-        aircraft = bs_db.query_aircraft(entry[0])
+    for entry in query:
+
+        bs_db = get_basestation_db()
+        aircraft = bs_db.query_aircraft(entry.icao)
 
         if aircraft:
-            response.append((aircraft.__dict__, time.ctime(entry[1].last_seen)))
-
-        response.sort(key=lambda tup: tup[1], reverse=True)
+            response.append((aircraft.__dict__, entry.timestmp))
 
     statusInfo = {
-        'updaterAlive' :  updater.isAlive(),
+        'updaterAlive' : updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
         'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'     
     }    
@@ -56,34 +92,32 @@ def index():
 @app.route("/pos/<icao24>") 
 def get_positions(icao24):
 
-    entries = updater.get_entry(icao24)
+    query = (Position
+            .select(Position.lat, Position.lon, Position.alt)
+            .where(Position.icao == icao24 )
+    )
+
+    entries = list(map(lambda p : [p.lat, p.lon, p.alt], query))
 
     if entries:
-        return Response(json.dumps(entries.pos), mimetype='application/json')
-    else:
-        return "Not found", 404
-
-@app.route("/pos/<icao24>") 
-def get_position(icao24):
-
-    entries = updater.get_entry(icao24)
-
-    if entries:
-        return Response(json.dumps(entries.pos), mimetype='application/json')
+        return Response(json.dumps(entries), mimetype='application/json')
     else:
         return "Not found", 404
 
 @app.route("/positions") 
 def get_all_positions():
 
-    entries = updater.get_active_entries()
+    query = (Position.select(Position.icao, Position.lat, Position.lon, Position.alt, Position.timestmp)
+        .order_by(Position.icao, Position.timestmp.desc()) )
 
-    result = []
-    for entry in entries:
-        result.append( [entry[0],entry[1].pos])
+    positions = dict()
+    for x in query:
+        if x.icao not in positions:
+            positions[x.icao] = []        
+        positions[x.icao].append((x.lat, x.lon))
 
-    if entries:
-        return Response(json.dumps(result), mimetype='application/json')
+    if positions:
+        return Response(json.dumps(positions), mimetype='application/json')
     else:
         return "Not found", 404
 
@@ -95,11 +129,18 @@ def get_map(icao24):
 def get_map_all():
     return render_template('map.html', icao24='')
 
+@app.before_request
+def before_request():
+    if pos_db.is_closed():
+        pos_db.connect()
+
 @app.after_request
 def after_request(response):
+    pos_db.close()
+
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
     return response    
 
 if __name__ == '__main__':
