@@ -28,26 +28,9 @@ def get_basestation_db():
         basestation_db = g._basestation_db = BaseStationDB(config.data_folder + "BaseStation.sqb")
     return basestation_db
 
-def get_position_db():
-    position_db = getattr(g, '_position_db', None)
-    if position_db is None:
-        conf = getattr(g, '_config', None)
-        position_db =  SqliteDatabase('{:s}/positions.db'.format(conf.data_folder))
-        database_proxy.initialize(position_db)
-        position_db.create_tables([Position]) #init db
-
-    return position_db      
-
 app = Flask(__name__)
 
 pos_db = None
-
-# Set up background threads
-with app.app_context():
-    adsb_config = get_config()
-    pos_db = get_position_db()
-    updater = AircaftProcessor(adsb_config,pos_db)
-    updater.start()
 
 @app.route("/api")
 def rest_api():
@@ -84,7 +67,7 @@ def index():
     statusInfo = {
         'updaterAlive' : updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
-        'mode' : 'ModeSmixer2' if adsb_config.type == 'mm2' else 'VirtualRadar'     
+        'mode' : 'ModeSmixer2' if get_config().type == 'mm2' else 'VirtualRadar'     
     }    
     
     return render_template('aircraft.html', airplanes=response, status=statusInfo, silhouette=updater.get_silhouete_params())
@@ -143,5 +126,23 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
     return response    
 
+def init_db(conf):
+    position_db =  SqliteDatabase('{:s}/positions.db'.format(conf.data_folder))
+    database_proxy.initialize(position_db)
+    position_db.create_tables([Position]) #init db
+    return position_db
+
 if __name__ == '__main__':
+
+    conf = None
+    with app.app_context():
+         conf = get_config()
+    pos_db = init_db(conf)
+
+    updater = AircaftProcessor(conf, pos_db)
+    updater.start()
+
     app.run(host='0.0.0.0', debug=False)
+
+    updater.stop()
+

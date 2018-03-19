@@ -1,5 +1,5 @@
-import threading
-import time
+from threading import Timer
+from time import sleep
 import datetime
 
 from adsb.modesmixer import ModeSMixer
@@ -9,11 +9,12 @@ from adsb.military import MilRanges
 from adsb.dbmodels  import Position
 from peewee import IntegrityError
 
-class AircaftProcessor(threading.Thread):
+class AircaftProcessor(object):
 
     def __init__(self, config, db):
 
-        threading.Thread.__init__(self)
+        self.sleep_time = 1
+        self._t = None
 
         if config.type == 'mm2':
             self._service = ModeSMixer(config.service_url)
@@ -40,34 +41,43 @@ class AircaftProcessor(threading.Thread):
         if num_records_deleted > 0:
             print('Deleting {:d} old records from the datbase'.format(num_records_deleted))
 
-    def run(self):
+    def _run(self):
 
-        while not self.interrupted:
+        positions = self._service.query_live_positions()
 
-            positions = self._service.query_live_positions()
+        if positions:
 
-            if positions:
+            # Filter for military icaos
+            if self._mil_only:
+                positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
 
-                # Filter for military icaos
-                if self._mil_only:
-                    positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+            # Filter out empty positons
+            pos_array = list(filter(lambda p : p[1] and p[2], positions))
 
-                # Filter out empty positons
-                pos_array = list(filter(lambda p : p[1] and p[2], positions))
+            if pos_array:
+                with self._db.atomic():
+                    fields = [Position.icao, Position.lat, Position.lon, Position.alt]
+                    Position.insert_many(pos_array, fields=fields).execute()
+                            
+        self.cleanup_items()
 
-                if pos_array:
-                    with self._db.atomic():
-                        fields = [Position.icao, Position.lat, Position.lon, Position.alt]
-                        Position.insert_many(pos_array, fields=fields).execute()
-                                
-            self.cleanup_items()
-            time.sleep(1)
-            
+        self._t = Timer(self.sleep_time, self._run)
+        self._t.start()
 
-        print("interupted")
+    def start(self):
+        if self._t is None:
+            self._t = Timer(self.sleep_time, self._run)
+            self._t.start()
+        else:
+            raise Exception("this timer is already running")
 
-    def __getattr__(self, name):
-        return getattr(self.instance, name)
+    def stop(self):
+        if self._t is not None:
+            self._t.cancel()
+            self._t = None
+
+    def isAlive(self):
+        return self._t.isAlive()
 
     def get_silhouete_params(self):
         return self._service.get_silhouete_params()
