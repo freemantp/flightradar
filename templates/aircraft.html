@@ -34,7 +34,7 @@
                     <td>{{ ap[0]['type1'] }}</td>
                     <td>{{ ap[0]['type2'] }}</td>
                     <td>{{ ap[0]['operator'] }}</td>
-                    <td>{{ ap[1]}}</td>
+                    <td>{{ ap[1].strftime('%H:%M - %d.%m.%Y')}}</td>
                     <td><a href="map/{{ap[0]['modes_hex']}}">POS</a></td>
                 </tr>
                 {% endfor %}

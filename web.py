@@ -1,4 +1,5 @@
 import json, time
+import datetime
 
 from flask import Flask
 from flask import Response
@@ -49,14 +50,33 @@ def rest_api():
 @app.route("/") 
 def index():
 
+    threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+
+    result_set = (Position
+        .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
+        .where(Position.timestmp > threshold_data)
+        .group_by(Position.icao)
+        .order_by(fn.MAX(Position.timestmp).desc()))
+
+    return render_entries(result_set)
+
+@app.route("/archived") 
+def archived():
+
+    result_set = (Position
+        .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
+        .where(Position.archived == True)
+        .group_by(Position.icao)
+        .order_by(fn.MAX(Position.timestmp).desc()))
+
+    return render_entries(result_set)
+
+
+def render_entries(entries):
+
     response = []
 
-    query = (Position
-         .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
-         .group_by(Position.icao)
-         .order_by(fn.MAX(Position.timestmp).desc()))
-
-    for entry in query:
+    for entry in entries:
 
         bs_db = get_basestation_db()
         aircraft = bs_db.query_aircraft(entry.icao)

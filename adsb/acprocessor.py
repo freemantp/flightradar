@@ -36,7 +36,8 @@ class AircaftProcessor(object):
         
         threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
         query = (Position.delete()
-                .where(Position.timestmp <  threshold_data) )
+                         .where((Position.timestmp < threshold_data) & (Position.archived == False) ) )
+
         num_records_deleted = query.execute()
         if num_records_deleted > 0:
             print('Deleting {:d} old records from the datbase'.format(num_records_deleted))

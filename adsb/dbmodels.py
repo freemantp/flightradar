@@ -7,8 +7,9 @@ class Position(pw.Model):
     icao = pw.FixedCharField(max_length=6)
     lat = pw.FloatField()
     lon = pw.FloatField()
-    alt = pw.IntegerField()
+    alt = pw.IntegerField(null=True)
     timestmp = pw.DateTimeField(default=datetime.datetime.utcnow)
+    archived = pw.BooleanField(default=False)
 
     class Meta:
         primary_key = pw.CompositeKey('icao', 'timestmp')
