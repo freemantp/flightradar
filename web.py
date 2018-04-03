@@ -1,18 +1,19 @@
-import json, time
 import datetime
+import json
+import logging
+import time
 
-from flask import Flask
-from flask import Response
-from flask import render_template
-from flask import jsonify
-from flask import g
-
+from flask import Flask, Response, g, jsonify, render_template, request
 from peewee import SqliteDatabase, fn
 
-from adsb.config import Config
-from adsb.basestationdb import BaseStationDB
 from adsb.acprocessor import AircaftProcessor
-from adsb.dbmodels import Position, database_proxy
+from adsb.aircraft import Aircraft
+from adsb.basestationdb import BaseStationDB
+from adsb.config import Config
+from adsb.db.dbmodels import Position, database_proxy
+from adsb.db.dbutil import DBUtils
+
+logging.basicConfig(level=logging.INFO)
 
 def get_config():
     conf = getattr(g, '_config', None)
@@ -33,30 +34,23 @@ app = Flask(__name__)
 
 pos_db = None
 
-@app.route("/api")
-def rest_api():
-    response = []
-
-    bs_db = get_basestation_db()
-
-    for icao24, tmstmp in updater.aircraft.items():
-        aircraft = bs_db.query_aircraft(icao24)
-
-        if aircraft:
-            response.append((aircraft.__dict__, time.ctime(tmstmp)))
-
-    return Response(json.dumps(response), mimetype='application/json')
-
 @app.route("/") 
 def index():
 
-    threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+    if get_config().delete_after > 0:
+        threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+        
+        result_set = (Position
+            .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
+            .where(Position.timestmp > threshold_data)
+            .group_by(Position.icao)
+            .order_by(fn.MAX(Position.timestmp).desc()))
 
-    result_set = (Position
-        .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
-        .where(Position.timestmp > threshold_data)
-        .group_by(Position.icao)
-        .order_by(fn.MAX(Position.timestmp).desc()))
+    else:
+        result_set = (Position
+            .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
+            .group_by(Position.icao)
+            .order_by(fn.MAX(Position.timestmp).desc()))
 
     return render_entries(result_set)
 
@@ -64,15 +58,15 @@ def index():
 def archived():
 
     result_set = (Position
-        .select(Position.icao, fn.MAX(Position.timestmp).alias('timestmp') )
+        .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
         .where(Position.archived == True)
         .group_by(Position.icao)
         .order_by(fn.MAX(Position.timestmp).desc()))
 
-    return render_entries(result_set)
+    return render_entries(result_set,True)
 
 
-def render_entries(entries):
+def render_entries(entries, archived = False):
 
     response = []
 
@@ -81,26 +75,24 @@ def render_entries(entries):
         bs_db = get_basestation_db()
         aircraft = bs_db.query_aircraft(entry.icao)
 
-        if aircraft:
-            response.append((aircraft.__dict__, entry.timestmp))
-
-    statusInfo = {
+        if not aircraft:
+            aircraft = Aircraft(entry.icao)
+        response.append((aircraft.__dict__, entry.timestmp, entry.archived))
+            
+    metaInfo = {
         'updaterAlive' : updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
-        'mode' : 'ModeSmixer2' if get_config().type == 'mm2' else 'VirtualRadar'     
+        'mode' : 'ModeSmixer2' if get_config().type == 'mm2' else 'VirtualRadar',
+        'archived' : archived
     }    
     
-    return render_template('aircraft.html', airplanes=response, status=statusInfo, silhouette=updater.get_silhouete_params())
+    return render_template('aircraft.html', airplanes=response, status=metaInfo, silhouette=updater.get_silhouete_params())
 
 @app.route("/pos/<icao24>") 
 def get_positions(icao24):
 
-    query = (Position
-            .select(Position.lat, Position.lon, Position.alt)
-            .where(Position.icao == icao24 )
-    )
-
-    entries = list(map(lambda p : [p.lat, p.lon, p.alt], query))
+    flights = DBUtils.get_flights(icao24)
+    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), flights))
 
     if entries:
         return Response(json.dumps(entries), mimetype='application/json')
@@ -110,19 +102,12 @@ def get_positions(icao24):
 @app.route("/positions") 
 def get_all_positions():
 
-    query = (Position.select(Position.icao, Position.lat, Position.lon, Position.alt, Position.timestmp)
-        .order_by(Position.icao, Position.timestmp.desc()) )
+    archived = get_boolean_arg('archived')
 
-    positions = dict()
-    for x in query:
-        if x.icao not in positions:
-            positions[x.icao] = []        
-        positions[x.icao].append((x.lat, x.lon))
+    flights = DBUtils.get_all_flights(archived)
+    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), flights))    
 
-    if positions:
-        return Response(json.dumps(positions), mimetype='application/json')
-    else:
-        return "Not found", 404
+    return Response(json.dumps(entries), mimetype='application/json')
 
 @app.route("/map/<icao24>") 
 def get_map(icao24):
@@ -130,7 +115,8 @@ def get_map(icao24):
 
 @app.route("/map") 
 def get_map_all():
-    return render_template('map.html', icao24='')
+    archived = get_boolean_arg('archived')
+    return render_template('map.html', archived=archived)
 
 @app.before_request
 def before_request():
@@ -152,6 +138,13 @@ def init_db(conf):
     position_db.create_tables([Position]) #init db
     return position_db
 
+def get_boolean_arg(argname):
+    arch_arg = request.args.get(argname)
+    if arch_arg:
+        return arch_arg.lower() == 'true'
+    else:
+        return False
+
 if __name__ == '__main__':
 
     conf = None
@@ -165,4 +158,3 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=False)
 
     updater.stop()
-

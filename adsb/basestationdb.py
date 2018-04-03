@@ -1,5 +1,6 @@
 import sqlite3
 import datetime
+import logging
 
 from .aircraft import Aircraft
 
@@ -15,7 +16,7 @@ class BaseStationDB:
     def __del__(self):
         self.cur.close()
         self.conn.close()
-        print('Database connection closed')
+        logging.info('Database connection closed')
 
     def query_aircraft(self, icao):
         self.cur.execute("SELECT Registration, ICAOTypeCode, Type, RegisteredOwners FROM Aircraft where ModeS = (?)", (icao.strip(),))
@@ -40,7 +41,7 @@ class BaseStationDB:
                 self.cur.execute(sql, (aircraft.reg, aircraft.modes_hex)  )
                 return True
         except sqlite3.OperationalError:
-            print("Could not update aircraft - %s" % aircraft.str())
+            logging.error("Could not update aircraft - %s" % aircraft.str())
             return False
 
     def insert_aircraft(self, acrft):
@@ -51,6 +52,6 @@ class BaseStationDB:
                 self.cur.execute(sql)
                 return True
             except sqlite3.OperationalError:
-                print("Could not update aircraft - %s" % aircraft.str())
+                logging.error("Could not update aircraft - %s" % aircraft.str())
         
         return False

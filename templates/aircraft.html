@@ -2,6 +2,8 @@
     <head>
         <title>Aircraft</title>       
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+        <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        
         <style>
             .badge-silhouette {
             background-color: #D9EBF9;
@@ -10,7 +12,7 @@
     </head>
     <body>
         
-                    {%if not status.updaterAlive %}<div class="alert alert-danger" role="alert">Updater thread is dead</div>{% endif %}
+        {%if not status.updaterAlive %}<div class="alert alert-danger" role="alert">Updater thread is dead</div>{% endif %}
         <div class="container">
         <table class="table table-striped" width="500px">
             <thead>
@@ -22,20 +24,28 @@
                     <th scope="col">Type</th>
                     <th scope="col">Operator</th>
                     <th scope="col">Last contact</th>
-                    <th scope="col"><a href="map">Map</a></th>
+                    <th scope="col"></th>
+                    <th scope="col"><a href="map{%if status.archived %}?archived=true{% endif %}"><i class="fa fa-globe" alt="Show all flights"></i></a></th>
                 </tr>
             </thead> 
             <tbody>
                 {% for ap in airplanes %}
                 <tr>
-                    <td><span class="badge badge-silhouette"><img src="{{silhouette.prefix}}{{ ap[0]['type1']}}{{silhouette.suffix}}"></span></td>
+                    <td><span class="badge badge-silhouette">
+                        {%if not ap[0]['type1'] %}
+                        <i class="fa fa-question fa-2x" aria-hidden="true" style="width: 85px; height: 20px"></i>
+                        {% else %}
+                        <img src="{{silhouette.prefix}}{{ ap[0]['type1']}}{{silhouette.suffix}}"></span>
+                        {% endif %}
+                    </td>
                     <td>{{ ap[0]['modes_hex']}}</td>
                     <td>{{ ap[0]['reg'] }}</td>
                     <td>{{ ap[0]['type1'] }}</td>
                     <td>{{ ap[0]['type2'] }}</td>
                     <td>{{ ap[0]['operator'] }}</td>
-                    <td>{{ ap[1].strftime('%H:%M - %d.%m.%Y')}}</td>
-                    <td><a href="map/{{ap[0]['modes_hex']}}">POS</a></td>
+                    <td>{{ ap[1].strftime('%d.%m.%Y %H:%M')}}</td>
+                    <td>{%if ap[2]%}<i class="fa fa-archive" title="archived"></i>{% endif %}</td>
+                    <td><a href="map/{{ap[0]['modes_hex']}}" alt="Show flight path"><i class="fa fa-map-marker"></i></a></td>
                 </tr>
                 {% endfor %}
         </tbody>  

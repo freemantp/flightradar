@@ -1,6 +1,8 @@
 from adsb.radarservice import RadarService
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ModeSMixer(RadarService):
 
@@ -36,12 +38,12 @@ class ModeSMixer(RadarService):
                 self.connection_alive = True
                 return flights
             else:
-                print("[ModeSMixer] unexpected HTTP response: {:d}".format(res.code))
+                logger.error("[ModeSMixer] unexpected HTTP response: {:d}".format(res.code))
 
         except ConnectionRefusedError as cre:
-            print(cre)
+            logger.error(cre)
         except OSError as e:
-            print(e)
+            logger.error(e)
 
         if conn:
             conn.close()

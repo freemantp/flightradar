@@ -1,8 +1,11 @@
 from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
 import json
 import time
+import logging
 
 from .aircraft import Aircraft
+
+logger = logging.getLogger(__name__)
 
 class Flightradar24:
 
@@ -50,7 +53,7 @@ class Flightradar24:
                     failcounter += 1
                     res.read()
 
-                    #print('402, sleeping for {}sec'.format( self.timeout ) )
+                    #logger.error('402, sleeping for {}sec'.format( self.timeout ) )
                     time.sleep(self.timeout)
                     self.timeout += 1
                 elif res.status >= 500 and res.status < 600:
@@ -62,13 +65,13 @@ class Flightradar24:
             except RemoteDisconnected:
                 failcounter += 1
                 time.sleep(failcounter * 5)
-                print("error, waiting some time")
+                logger.error("error, waiting some time")
             except IncompleteRead:
                 failcounter += 1
                 time.sleep(failcounter * 3)
-                print("error, waiting some time")
+                logger.error("error, waiting some time")
 
         if failcounter == self.maxretires:
-            print("Too many failures for %s, giving up" % mode_s_hex)
+            logger.error("Too many failures for %s, giving up" % mode_s_hex)
 
         return None

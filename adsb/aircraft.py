@@ -3,7 +3,7 @@
 class Aircraft:
     """ Aircraft data """
 
-    def __init__(self, modeShex, reg, type1, type2, operator):
+    def __init__(self, modeShex, reg=None, type1=None, type2=None, operator=None):
 
         if not modeShex:
             raise ValueError("Empty hex code not allowed")

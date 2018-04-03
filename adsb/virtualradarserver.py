@@ -1,12 +1,15 @@
 from adsb.radarservice import RadarService
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VirtualRadarServer(RadarService):
 
     """ VirtualRadarServer Queries """
 
     def __init__(self, url):
-        RadarService.__init__(self, url) 
+        RadarService.__init__(self, url)
 
     def query_live_positions(self):
         """ Returns a list of Mode-S adresses with current position information"""
@@ -39,15 +42,15 @@ class VirtualRadarServer(RadarService):
                     return flights
                 
                 else:
-                    print("Request to {:s} failed".format(
+                    logger.error("Request to {:s} failed".format(
                         self._url_parms.geturl()))
             else:
-                print("[VRS] unexpected HTTP response: {:d}".format(res.code))
+                logger.error("[VRS] unexpected HTTP response: {:d}".format(res.code))
 
         except ConnectionRefusedError as cre:
-            print(cre)
+            logger.error(cre)
         except OSError as e:
-            print(e)
+            logger.error(e)
 
         if conn:
             conn.close()    
