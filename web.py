@@ -1,7 +1,10 @@
 import datetime
 import json
 import logging
+
 import time
+from pytz import timezone
+from dateutil import tz
 
 from flask import Flask, Response, g, jsonify, render_template, request
 from peewee import SqliteDatabase, fn
@@ -131,6 +134,12 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
     return response    
+
+@app.template_filter('localdate')
+def datetimefilter(value, format="%d.%m.%Y %H:%M"):    
+    utctime = timezone('UTC').localize(value)
+    local_time = utctime.astimezone(tz.gettz('Europe/Zurich'))
+    return local_time.strftime(format)
 
 def init_db(conf):
     position_db =  SqliteDatabase('{:s}/positions.db'.format(conf.data_folder))
