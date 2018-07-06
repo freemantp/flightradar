@@ -158,7 +158,7 @@ def init_db(conf):
 
 @atexit.register
 def _stop_worker_threads():
-    position_db.stop()    
+    pos_db.stop()    
 
 def get_boolean_arg(argname):
     arch_arg = request.args.get(argname)
