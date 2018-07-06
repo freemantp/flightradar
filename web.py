@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import atexit
 
 import time
 from pytz import timezone
@@ -8,6 +9,7 @@ from dateutil import tz
 
 from flask import Flask, Response, g, jsonify, render_template, request
 from peewee import SqliteDatabase, fn
+from playhouse.sqliteq import SqliteQueueDatabase
 
 from adsb.acprocessor import AircaftProcessor
 from adsb.aircraft import Aircraft
@@ -142,10 +144,21 @@ def datetimefilter(value, format="%d.%m.%Y %H:%M"):
     return local_time.strftime(format)
 
 def init_db(conf):
-    position_db =  SqliteDatabase('{:s}/positions.db'.format(conf.data_folder))
+
+    position_db = SqliteQueueDatabase(
+        '{:s}/positions.db'.format(conf.data_folder),
+        use_gevent=False,  # Use the standard library "threading" module.
+        autostart=True,  # The worker thread now must be started manually.
+        queue_max_size=64,  # Max. # of pending writes that can accumulate.
+        results_timeout=5.0)  # Max. time to wait for query to be executed.
+
     database_proxy.initialize(position_db)
     position_db.create_tables([Position]) #init db
     return position_db
+
+@atexit.register
+def _stop_worker_threads():
+    position_db.stop()    
 
 def get_boolean_arg(argname):
     arch_arg = request.args.get(argname)
