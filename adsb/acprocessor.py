@@ -62,10 +62,10 @@ class AircaftProcessor(object):
             pos_array = list(filter(lambda p : p[1] and p[2], positions))
 
             if pos_array:
-                with self._db.atomic():
-                    fields = [Position.icao, Position.lat, Position.lon, Position.alt]
-                    for i in range(0, len(pos_array), self._insert_batch_size):
-                        Position.insert_many(pos_array[i:i+self._insert_batch_size], fields=fields).execute()
+                #with self._db.atomic():
+                fields = [Position.icao, Position.lat, Position.lon, Position.alt]
+                for i in range(0, len(pos_array), self._insert_batch_size):
+                    Position.insert_many(pos_array[i:i+self._insert_batch_size], fields=fields).execute()
                             
         self.cleanup_items()
 
