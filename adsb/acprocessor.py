@@ -10,6 +10,8 @@ from adsb.military import MilRanges
 from adsb.db.dbmodels  import Position
 from peewee import IntegrityError
 
+from playhouse.sqliteq import ResultTimeout
+
 logger = logging.getLogger(__name__)
 
 class AircaftProcessor(object):
@@ -44,9 +46,12 @@ class AircaftProcessor(object):
             query = (Position.delete()
                             .where((Position.timestmp < threshold_data) & (Position.archived == False) ) )
 
-            num_records_deleted = query.execute()
-            if num_records_deleted > 0:
-                logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
+            try:
+                num_records_deleted = query.execute()
+                if num_records_deleted > 0:
+                    logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
+            except ResultTimeout as e:
+                logger.info('Database timeout: {:s}'.format(e))
 
     def _run(self):
 
