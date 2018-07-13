@@ -1,4 +1,5 @@
 from adsb.flightradar24 import Flightradar24
+from adsb.bazllfr import BazlLFR
 from adsb.modesmixer import ModeSMixer
 from adsb.virtualradarserver import VirtualRadarServer
 from adsb.basestationdb import BaseStationDB
@@ -20,7 +21,7 @@ adsb_config.from_file('config.json')
 
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
-fr24_queried = set()
+modes_queried = set()
 not_found = set()
 
 update_count = 0
@@ -45,9 +46,19 @@ def is_swiss(icaohex):
             return True
     return False
 
-def update_live_from_fr24():
+def query_modes(hex):
 
     fr24 = Flightradar24()
+    bazl_lfr = BazlLFR()
+
+    if is_swiss(hex):                            
+        logger.info("quering Bazl LFR for %s" % hex)
+        return bazl_lfr.query_aircraft(hex)
+    else:
+        logger.info("quering fr24 for %s" % hex)
+        return fr24.query_aircraft(hex)
+
+def update_live():
 
     if adsb_config.type == 'mm2':
         msm = ModeSMixer(adsb_config.service_url)
@@ -65,13 +76,14 @@ def update_live_from_fr24():
 
                 if aircraft and not aircraft.is_complete():
 
-                    if hex not in fr24_queried:
-                        logger.info("quering fr24 for %s" % hex)
-                        fr24aircraft = fr24.query_aircraft(hex)
-                        fr24_queried.add(hex)                        
-                        if fr24aircraft:
-                            logger.info("fr24: %s" % fr24aircraft)                            
-                            aircraft.merge(fr24aircraft)
+                    if hex not in modes_queried:
+
+                        aircraft_response = query_modes(hex)
+
+                        modes_queried.add(hex)                        
+                        if aircraft_response:
+                            logger.info("fr24: %s" % aircraft_response)                            
+                            aircraft.merge(aircraft_response)
                             updated = bs_db.update_aircraft(aircraft)
                             global update_count
                             update_count += 1
@@ -80,13 +92,14 @@ def update_live_from_fr24():
                             not_found.add(hex)
 
                 if not aircraft:
-                    fr24aircraft = fr24.query_aircraft(hex)
-                    fr24_queried.add(hex)
-                    if fr24aircraft:
-                        inserted = bs_db.insert_aircraft(fr24aircraft)
+                    aircraft_response = query_modes(hex)
+
+                    modes_queried.add(hex)
+                    if aircraft_response:
+                        inserted = bs_db.insert_aircraft(aircraft_response)
                         global insert_count
                         insert_count += 1
-                        logger.info("%s  - inserted=%s" % (fr24aircraft, inserted))
+                        logger.info("%s  - inserted=%s" % (aircraft_response, inserted))
 
         #logger.info("sleeping")
         time.sleep(20)
@@ -108,4 +121,4 @@ def read_csv():
 
 if __name__ == '__main__':
     logger.info("Starting update")
-    update_live_from_fr24()
+    update_live()
