@@ -13,6 +13,8 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+logger =  logging.getLogger("Updater")
+
 adsb_config = Config()
 adsb_config.from_file('config.json')
 
@@ -25,13 +27,13 @@ update_count = 0
 insert_count = 0
 
 def signal_handler(signal, frame):
-        logging.info('You pressed Ctrl+C!')
-        logging.info('updated: %d, inserted: %d ' % (update_count,insert_count) )
+        logger.info('You pressed Ctrl+C!')
+        logger.info('updated: %d, inserted: %d ' % (update_count,insert_count) )
 
         if not_found:
-            logging.info('not found: ')
+            logger.info('not found: ')
             for hex in not_found:
-                logging.info("\t" + hex)
+                logger.info("\t" + hex)
 
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
@@ -54,7 +56,7 @@ def update_live_from_fr24():
 
     while True:
         live_aircraft = msm.query_live_icao24()
-        #logging.info("got %d live ones" % len(live_aircraft))
+        #logger.info("got %d live ones" % len(live_aircraft))
 
         if live_aircraft:
             for hex in live_aircraft:
@@ -64,16 +66,16 @@ def update_live_from_fr24():
                 if aircraft and not aircraft.is_complete():
 
                     if hex not in fr24_queried:
-                        logging.info("quering fr24 for %s" % hex)
+                        logger.info("quering fr24 for %s" % hex)
                         fr24aircraft = fr24.query_aircraft(hex)
-                        fr24_queried.add(hex)
-                        logging.info("fr24: %s" % fr24aircraft)
+                        fr24_queried.add(hex)                        
                         if fr24aircraft:
+                            logger.info("fr24: %s" % fr24aircraft)                            
                             aircraft.merge(fr24aircraft)
                             updated = bs_db.update_aircraft(aircraft)
                             global update_count
                             update_count += 1
-                            logging.info("%s  - updated=%s" % (aircraft,updated))
+                            logger.info("%s  - updated=%s" % (aircraft,updated))
                         else:
                             not_found.add(hex)
 
@@ -84,9 +86,9 @@ def update_live_from_fr24():
                         inserted = bs_db.insert_aircraft(fr24aircraft)
                         global insert_count
                         insert_count += 1
-                        logging.info("%s  - inserted=%s" % (fr24aircraft, inserted))
+                        logger.info("%s  - inserted=%s" % (fr24aircraft, inserted))
 
-        #logging.info("sleeping")
+        #logger.info("sleeping")
         time.sleep(20)
 
 def read_csv():
@@ -95,13 +97,15 @@ def read_csv():
         if aircraft:
             if not aircraft.is_complete():
                 bs_db.update_aircraft(plane)
-                logging.info("%s updated" % plane.reg)
+                logger.info("%s updated" % plane.reg)
             else:
-                logging.info(plane)
-                logging.info(aircraft)
-                logging.info("\n")
+                logger.info(plane)
+                logger.info(aircraft)
+                logger.info("\n")
         else:
             bs_db.insert_aircraft(plane)
-            logging.info("%s inserted" % plane.reg)
+            logger.info("%s inserted" % plane.reg)
 
-update_live_from_fr24()
+if __name__ == '__main__':
+    logger.info("Starting update")
+    update_live_from_fr24()
