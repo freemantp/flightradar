@@ -15,6 +15,9 @@ class BazlLFR:
 
     def __init__(self):
 
+        self.known_replacements = dict()
+        self.known_replacements['AIRBUS S.A.S.'] = 'Airbus'
+
         self.conn = HTTPSConnection(
             "app02.bazl.admin.ch", context=ssl._create_unverified_context())
         self.headers = {
@@ -55,12 +58,25 @@ class BazlLFR:
                     aircraft = response_body[0]
                     reg = aircraft['registration']
                     type1 = aircraft['icaoCode']
-                    type2 = '{:s} {:s} {:s}'.format(aircraft['manufacturer'], aircraft['aircraftModelType'],
-                                                    '' if aircraft['details']['marketing'] == 'N/A' else aircraft['details']['marketing'])
+
+                    manufacturer = aircraft['manufacturer'] \
+                        if aircraft['manufacturer'] not in self.known_replacements \
+                        else self.known_replacements[aircraft['manufacturer']]
+
+                    type2 = '{:s} {:s} {:s}'.format(manufacturer, aircraft['aircraftModelType'], '' \
+                                                    if aircraft['details']['marketing'] == 'N/A' \
+                                                    else aircraft['details']['marketing'])
 
                     for op in aircraft['ownerOperators']:
                         if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
                             operator = op['ownerOperator']
+
+                    # Sanitize uppercase strings
+                    if operator.isupper():
+                        operator = operator.title()
+
+                    if type2.isupper():
+                        type2 = type2.title()
 
                     return Aircraft(mode_s_hex, reg, type1, type2, operator)
             else:
