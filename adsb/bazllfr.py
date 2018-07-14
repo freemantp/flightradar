@@ -63,20 +63,22 @@ class BazlLFR:
                         if aircraft['manufacturer'] not in self.known_replacements \
                         else self.known_replacements[aircraft['manufacturer']]
 
-                    type2 = '{:s} {:s} {:s}'.format(manufacturer, aircraft['aircraftModelType'], '' \
-                                                    if aircraft['details']['marketing'] == 'N/A' \
-                                                    else aircraft['details']['marketing'])
+
+                    model = aircraft['aircraftModelType']
+                    marketing_desc = aircraft['details']['marketing']
 
                     for op in aircraft['ownerOperators']:
                         if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
                             operator = op['ownerOperator']
 
-                    # Sanitize uppercase strings
-                    if operator.isupper():
-                        operator = operator.title()
-
-                    if type2.isupper():
-                        type2 = type2.title()
+                    # Sanitize strings
+                    
+                    operator = operator.title() if operator.isupper() else operator
+                    model = model.title() if model.isupper() else model
+                    marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
+                    marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc                    
+                        
+                    type2 = '{:s} {:s} {:s}'.format(manufacturer, model, marketing_desc)
 
                     return Aircraft(mode_s_hex, reg, type1, type2, operator)
             else:
