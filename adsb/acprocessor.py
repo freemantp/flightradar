@@ -34,45 +34,46 @@ class AircaftProcessor(object):
         self._db = db
         self.delete_after = config.delete_after
         # see https://stackoverflow.com/questions/35616602/peewee-operationalerror-too-many-sql-variables-on-upsert-of-only-150-rows-8-c#36788489
-        self._insert_batch_size = 50 
+        self._insert_batch_size = 50
 
     def is_service_alive(self):
         return self._service.connection_alive
 
     def cleanup_items(self):
 
-        if self.delete_after > 0:        
+        if self.delete_after > 0:
             threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
             query = (Position.delete()
                             .where((Position.timestmp < threshold_data) & (Position.archived == False) ) )
 
-            try:
-                num_records_deleted = query.execute()
-                if num_records_deleted > 0:
-                    logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
-            except ResultTimeout as e:
-                logger.info('Database timeout: {:s}'.format(e))
+            num_records_deleted = query.execute()
+            if num_records_deleted > 0:
+                logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
+
 
     def _run(self):
 
         positions = self._service.query_live_positions()
 
-        if positions:
+        try:
+            if positions:
+                # Filter for military icaos
+                if self._mil_only:
+                    positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
 
-            # Filter for military icaos
-            if self._mil_only:
-                positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+                # Filter out empty positons
+                pos_array = list(filter(lambda p : p[1] and p[2], positions))
 
-            # Filter out empty positons
-            pos_array = list(filter(lambda p : p[1] and p[2], positions))
+                if pos_array:
+                    #with self._db.atomic():
+                    fields = [Position.icao, Position.lat, Position.lon, Position.alt]
+                    for i in range(0, len(pos_array), self._insert_batch_size):
+                        Position.insert_many(pos_array[i:i+self._insert_batch_size], fields=fields).execute()
 
-            if pos_array:
-                #with self._db.atomic():
-                fields = [Position.icao, Position.lat, Position.lon, Position.alt]
-                for i in range(0, len(pos_array), self._insert_batch_size):
-                    Position.insert_many(pos_array[i:i+self._insert_batch_size], fields=fields).execute()
-                            
-        self.cleanup_items()
+            self.cleanup_items()
+
+        except ResultTimeout as e:
+            logger.info('Database timeout: {:s}'.format(e))
 
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()

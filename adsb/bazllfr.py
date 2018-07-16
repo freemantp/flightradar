@@ -17,6 +17,8 @@ class BazlLFR:
 
         self.known_replacements = dict()
         self.known_replacements['AIRBUS S.A.S.'] = 'Airbus'
+        self.known_replacements['CESSNA AIRCRAFT COMPANY'] = 'Cessna'
+        self.known_replacements['AGUSTAWESTLAND S.P.A.'] = 'Agusta Westland'
 
         self.conn = HTTPSConnection(
             "app02.bazl.admin.ch", context=ssl._create_unverified_context())
@@ -63,7 +65,6 @@ class BazlLFR:
                         if aircraft['manufacturer'] not in self.known_replacements \
                         else self.known_replacements[aircraft['manufacturer']]
 
-
                     model = aircraft['aircraftModelType']
                     marketing_desc = aircraft['details']['marketing']
 
@@ -71,14 +72,15 @@ class BazlLFR:
                         if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
                             operator = op['ownerOperator']
 
-                    # Sanitize strings
-                    
+                    # Sanitize strings                    
+                    manufacturer = manufacturer.title() if manufacturer.isupper() else manufacturer
                     operator = operator.title() if operator.isupper() else operator
                     model = model.title() if model.isupper() else model
                     marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
                     marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc                    
                         
-                    type2 = '{:s} {:s} {:s}'.format(manufacturer, model, marketing_desc)
+                    type2 = '{:s} {:s}'.format(manufacturer, model)
+                    type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
 
                     return Aircraft(mode_s_hex, reg, type1, type2, operator)
             else:
