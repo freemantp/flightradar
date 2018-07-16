@@ -21,6 +21,8 @@ adsb_config.from_file('config.json')
 
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
+sources = [BazlLFR(), Flightradar24()]
+
 modes_queried = set()
 not_found = set()
 
@@ -39,24 +41,15 @@ def signal_handler(signal, frame):
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
 
-def is_swiss(icaohex):
-    if icaohex and icaohex[0:2] == "4B":
-        third = int(icaohex[2],16)
-        if third >=0 and third <=8:
-            return True
-    return False
+def query_modes(modeS_address):
 
-def query_modes(hex):
-
-    fr24 = Flightradar24()
-    bazl_lfr = BazlLFR()
-
-    if is_swiss(hex):                            
-        logger.info("quering Bazl LFR for %s" % hex)
-        return bazl_lfr.query_aircraft(hex)
-    else:
-        logger.info("quering fr24 for %s" % hex)
-        return fr24.query_aircraft(hex)
+    for s in sources:
+        if s.accept(modeS_address):
+             logger.info('Querying {:s} for {:s}'.format(s.name(), modeS_address))
+             aircraft = s.query_aircraft(modeS_address)
+             if aircraft:
+                 return aircraft
+    return None
 
 def update_live():
 
@@ -76,7 +69,7 @@ def update_live():
 
                 if aircraft and not aircraft.is_complete():
 
-                    if hex not in modes_queried:
+                    if hex not in modes_queried and hex not in not_found:
 
                         aircraft_response = query_modes(hex)
 

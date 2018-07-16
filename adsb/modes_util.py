@@ -7,7 +7,7 @@ from .config import Config
 from .basestationdb import BaseStationDB
 from .modesmixer import ModeSMixer
 
-class MilRanges:
+class ModesUtil:
 
     def __init__(self, folder):
 
@@ -46,13 +46,12 @@ class MilRanges:
         return False
 
 
-
 if __name__ == "__main__":
 
     app_cfg = Config()
     app_cfg.read_file()
 
-    mil_ranges = MilRanges(app_cfg.data_folder)
+    mil_ranges = ModesUtil(app_cfg.data_folder)
 
     bs_db = BaseStationDB(app_cfg.data_folder + "BaseStation.sqb")
     found_mil_ac = set()

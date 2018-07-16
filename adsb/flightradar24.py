@@ -23,6 +23,13 @@ class Flightradar24:
         self.timeout = 10
         self.maxretires = 5
 
+    @staticmethod
+    def name():
+        return 'FR24'
+
+    def accept(self, modes_address):
+        return True
+
     def query_aircraft(self, mode_s_hex):
 
         """ queries aircraft data """

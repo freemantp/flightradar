@@ -6,6 +6,8 @@ import ssl
 
 from .aircraft import Aircraft
 
+from .modes_util import ModesUtil
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,9 +18,14 @@ class BazlLFR:
     def __init__(self):
 
         self.known_replacements = dict()
+        
+        self.known_replacements['C SERIES AIRCRAFT LIMITED PARTNERSHIP'] = 'Bombardier'
+        self.known_replacements['REIMS AVIATION S.A.'] = 'Cessna (Reims)'
         self.known_replacements['AIRBUS S.A.S.'] = 'Airbus'
+        self.known_replacements['AIRBUS INDUSTRIE'] = 'Airbus'     
         self.known_replacements['CESSNA AIRCRAFT COMPANY'] = 'Cessna'
         self.known_replacements['AGUSTAWESTLAND S.P.A.'] = 'Agusta Westland'
+        self.known_replacements['THE BOEING COMPANY'] = 'Boeing'   
 
         self.conn = HTTPSConnection(
             "app02.bazl.admin.ch", context=ssl._create_unverified_context())
@@ -30,6 +37,13 @@ class BazlLFR:
         }
         self.timeout = 10
         self.maxretires = 5
+
+    @staticmethod
+    def name():
+        return 'BAZL LFR'
+
+    def accept(self, modes_address):
+        return ModesUtil.is_swiss(modes_address)
 
     def query_aircraft(self, mode_s_hex):
         """ queries aircraft data """

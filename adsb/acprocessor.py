@@ -5,7 +5,7 @@ import logging
 
 from adsb.modesmixer import ModeSMixer
 from adsb.virtualradarserver import VirtualRadarServer
-from adsb.military import MilRanges
+from adsb.modes_util import ModesUtil
 
 from adsb.db.dbmodels  import Position
 from peewee import IntegrityError
@@ -28,7 +28,7 @@ class AircaftProcessor(object):
         else:
             raise ValueError('Service type not specified in config')
 
-        self._mil_ranges = MilRanges(config.data_folder)
+        self._mil_ranges = ModesUtil(config.data_folder)
         self.interrupted = False
         self._mil_only = config.military_only
         self._db = db
