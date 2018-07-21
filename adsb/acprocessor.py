@@ -72,8 +72,8 @@ class AircaftProcessor(object):
 
             self.cleanup_items()
 
-        except ResultTimeout as e:
-            logger.info('Database timeout: {:s}'.format(e))
+        except ResultTimeout:
+            logger.info('Database timeout')
 
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()

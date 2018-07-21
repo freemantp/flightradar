@@ -49,7 +49,7 @@ class ModesUtil:
 if __name__ == "__main__":
 
     app_cfg = Config()
-    app_cfg.read_file()
+    app_cfg.from_file('config.json')
 
     mil_ranges = ModesUtil(app_cfg.data_folder)
 

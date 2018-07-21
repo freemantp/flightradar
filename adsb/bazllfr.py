@@ -1,11 +1,11 @@
 from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
+from socket import error as SocketError
 import json
 import time
 import logging
 import ssl
 
 from .aircraft import Aircraft
-
 from .modes_util import ModesUtil
 
 logger = logging.getLogger(__name__)
@@ -18,14 +18,14 @@ class BazlLFR:
     def __init__(self):
 
         self.known_replacements = dict()
-        
+
         self.known_replacements['C SERIES AIRCRAFT LIMITED PARTNERSHIP'] = 'Bombardier'
         self.known_replacements['REIMS AVIATION S.A.'] = 'Cessna (Reims)'
         self.known_replacements['AIRBUS S.A.S.'] = 'Airbus'
-        self.known_replacements['AIRBUS INDUSTRIE'] = 'Airbus'     
+        self.known_replacements['AIRBUS INDUSTRIE'] = 'Airbus'
         self.known_replacements['CESSNA AIRCRAFT COMPANY'] = 'Cessna'
         self.known_replacements['AGUSTAWESTLAND S.P.A.'] = 'Agusta Westland'
-        self.known_replacements['THE BOEING COMPANY'] = 'Boeing'   
+        self.known_replacements['THE BOEING COMPANY'] = 'Boeing'
 
         self.conn = HTTPSConnection(
             "app02.bazl.admin.ch", context=ssl._create_unverified_context())
@@ -86,13 +86,13 @@ class BazlLFR:
                         if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
                             operator = op['ownerOperator']
 
-                    # Sanitize strings                    
+                    # Sanitize strings
                     manufacturer = manufacturer.title() if manufacturer.isupper() else manufacturer
                     operator = operator.title() if operator.isupper() else operator
                     model = model.title() if model.isupper() else model
                     marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
-                    marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc                    
-                        
+                    marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc
+
                     type2 = '{:s} {:s}'.format(manufacturer, model)
                     type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
 
@@ -101,9 +101,12 @@ class BazlLFR:
                 res.read()
                 raise ValueError(
                     'Unexpected http code {:s}'.format(res.status))
-        except RemoteDisconnected:
-            logger.error("RemoteDisconnectede")
-        except IncompleteRead:
-            logger.error("IncompleteRead")
+        except RemoteDisconnected as rd:
+            logger.error("RemoteDisconnected: " + rd)
+        except IncompleteRead as ir:
+            logger.error("IncompleteRead: " + ir)
+        except SocketError as se:
+            logger.error("IncompleteRead: " + se)
+
 
         return None
