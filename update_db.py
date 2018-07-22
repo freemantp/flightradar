@@ -1,5 +1,6 @@
-from adsb.flightradar24 import Flightradar24
-from adsb.bazllfr import BazlLFR
+from adsb.datasource.flightradar24 import Flightradar24
+from adsb.datasource.bazllfr import BazlLFR
+from adsb.datasource.adsb_nl import AdsbNL
 from adsb.modesmixer import ModeSMixer
 from adsb.virtualradarserver import VirtualRadarServer
 from adsb.basestationdb import BaseStationDB
@@ -21,7 +22,7 @@ adsb_config.from_file('config.json')
 
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
-sources = [BazlLFR(), Flightradar24()]
+sources = [BazlLFR(), AdsbNL(adsb_config.data_folder), Flightradar24()]
 
 modes_queried = set()
 not_found = set()
@@ -43,12 +44,15 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def query_modes(modeS_address):
 
+    aircraft = None
+
     for s in sources:
-        if s.accept(modeS_address):
-             logger.info('Querying {:s} for {:s}'.format(s.name(), modeS_address))
-             aircraft = s.query_aircraft(modeS_address)
-             if aircraft:
-                 return aircraft
+        if s.accept(modeS_address):             
+            aircraft = s.query_aircraft(modeS_address)
+            logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))
+            if aircraft:
+                return aircraft            
+                 
     return None
 
 def update_live():

@@ -5,8 +5,8 @@ import time
 import logging
 import ssl
 
-from .aircraft import Aircraft
-from .modes_util import ModesUtil
+from ..aircraft import Aircraft
+from ..modes_util import ModesUtil
 
 logger = logging.getLogger(__name__)
 
