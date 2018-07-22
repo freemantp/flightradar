@@ -53,6 +53,6 @@ class BaseStationDB:
                 self.cur.execute(sql)
                 return True
             except sqlite3.OperationalError:
-                logger.error("Could not update aircraft - %s" % acrft.str())
+                logger.error('Could not update aircraft - {:s}'.format(acrft))
         
         return False
