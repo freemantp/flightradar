@@ -2,10 +2,10 @@ import time
 import datetime
 import csv
 
-from .config import Config
+from ..config import Config
 
-from .basestationdb import BaseStationDB
-from .modesmixer import ModeSMixer
+from ..db.basestationdb import BaseStationDB
+from ..datasource.modesmixer import ModeSMixer
 
 class ModesUtil:
 

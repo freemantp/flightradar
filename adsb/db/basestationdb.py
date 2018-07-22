@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 import logging
 
-from .aircraft import Aircraft
+from ..aircraft import Aircraft
 
 logger = logging.getLogger(__name__)
 
