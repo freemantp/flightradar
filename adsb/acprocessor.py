@@ -3,9 +3,9 @@ from time import sleep
 import datetime
 import logging
 
-from adsb.modesmixer import ModeSMixer
-from adsb.virtualradarserver import VirtualRadarServer
-from adsb.modes_util import ModesUtil
+from adsb.datasource.modesmixer import ModeSMixer
+from adsb.datasource.virtualradarserver import VirtualRadarServer
+from adsb.util.modes_util import ModesUtil
 
 from adsb.db.dbmodels  import Position
 from peewee import IntegrityError

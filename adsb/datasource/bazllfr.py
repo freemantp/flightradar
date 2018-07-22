@@ -6,9 +6,9 @@ import logging
 import ssl
 
 from ..aircraft import Aircraft
-from ..modes_util import ModesUtil
+from ..util.modes_util import ModesUtil
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('BAZL-LFR')
 
 
 class BazlLFR:

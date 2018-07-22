@@ -5,7 +5,7 @@ import logging
 
 from ..aircraft import Aircraft
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('FR24')
 
 class Flightradar24:
 

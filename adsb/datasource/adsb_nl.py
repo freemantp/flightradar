@@ -8,9 +8,9 @@ import re
 from bs4 import BeautifulSoup
 
 from ..aircraft import Aircraft
-from ..modes_util import ModesUtil
+from ..util.modes_util import ModesUtil
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('ADSB-NL')
 
 
 class AdsbNL:

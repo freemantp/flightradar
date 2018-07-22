@@ -13,8 +13,8 @@ from playhouse.sqliteq import SqliteQueueDatabase
 
 from adsb.acprocessor import AircaftProcessor
 from adsb.aircraft import Aircraft
-from adsb.basestationdb import BaseStationDB
 from adsb.config import Config
+from adsb.db.basestationdb import BaseStationDB
 from adsb.db.dbmodels import Position, database_proxy
 from adsb.db.dbutil import DBUtils
 
