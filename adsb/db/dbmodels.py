@@ -5,13 +5,12 @@ database_proxy = pw.Proxy()
 
 class Flight(pw.Model):
     id = pw.AutoField
-    callsign = pw.CharField()
-    modeS = pw.FixedCharField(max_length=6)
+    callsign = pw.CharField(null = True)
+    modeS = pw.FixedCharField(max_length=6) # TODO Create index
     archived = pw.BooleanField(default=False)
 
     class Meta:
         database = database_proxy
-
 
     # def __repr__(self):
     #     return 'Flight id={:d} callsign={:s} modeS={:s} archived={:s]'.format( self.id, self.callsign, self.modeS, self.archived )

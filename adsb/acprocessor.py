@@ -6,10 +6,9 @@ import logging
 from adsb.datasource.modesmixer import ModeSMixer
 from adsb.datasource.virtualradarserver import VirtualRadarServer
 from adsb.util.modes_util import ModesUtil
-
 from adsb.db.dbmodels import Position, Flight
-from peewee import IntegrityError
 
+from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ class AircaftProcessor(object):
         self._mil_only = config.military_only
         self._db = db
         self.delete_after = config.delete_after
-        self.callsigns = dict()
+        self.modeS_flight_map = dict()
         # see https://stackoverflow.com/questions/35616602/peewee-operationalerror-too-many-sql-variables-on-upsert-of-only-150-rows-8-c#36788489
         self._insert_batch_size = 50
 
@@ -51,47 +50,32 @@ class AircaftProcessor(object):
             if num_records_deleted > 0:
                 logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
 
-
     def _run(self):
 
-        positions = self._service.query_live_positions()
-
-
-        #pos_with_cs = list(map(lambda m: m[4], filter(lambda p : p[4], positions)))
-
-        #print(pos_with_cs)
+        positions = self._service.query_live_positions()        
 
         try:
             if positions:
                 # Filter for military icaos
                 if self._mil_only:
-                    positions = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+                    filtered_pos = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+                else:
+                    filtered_pos = positions
+                    #filtered_pos = list(filter(lambda p : True or self._mil_ranges.is_swiss(p[0]), positions))
 
-                # Filter out empty positons
-                non_empty_pos = filter(lambda p : p[1] and p[2], positions)
+                self.update_callsigns(filtered_pos)
 
-                active_callsigns = list(map(lambda m: (m[0], m[4]), filter(lambda p : p[4], positions)))
-
-                for cllsgn in active_callsigns:
-
-                    if cllsgn[1] in self.callsigns:
-                        cllsign_db_id = self.callsigns[cllsgn[1]]
-                    else:
-                        result_set = Flight.select(Flight.id).where(Flight.callsign == cllsgn[1]) #icao clause
-                        if result_set:
-                            cllsign_db_id.id = result_set.id
-                            self.callsigns[cllsgn[1]] = cllsign_db_id
-                        else:
-                            cllsign_db_id = Flight.insert(modeS=cllsgn[0], callsign=cllsgn[1] ).execute() #many
-                                    
-
+                # Filter sempty positons
+                non_empty_pos = filter(lambda p : p[1] and p[2], filtered_pos)
                 pos_array = list(non_empty_pos)
 
-                # if pos_array:
-                #     #with self._db.atomic():
-                #     fields = [Position.icao, Position.lat, Position.lon, Position.alt]
-                #     for i in range(0, len(pos_array), self._insert_batch_size):
-                #         Position.insert_many(pos_array[i:i+self._insert_batch_size], fields=fields).execute()
+                # Creatr tuples suitable for DB insertion
+                db_entries = list(map(lambda m : (self.modeS_flight_map[m[0]], m[1], m[2], m[3]), pos_array))
+                    
+                if db_entries:
+                    fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
+                    for i in range(0, len(db_entries), self._insert_batch_size):
+                        Position.insert_many(db_entries[i:i+self._insert_batch_size], fields=fields).execute()
 
             self.cleanup_items()
 
@@ -100,6 +84,27 @@ class AircaftProcessor(object):
 
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()
+
+    def update_callsigns(self, position_report):
+
+        # None for a callsign is allowed
+        active_callsigns = list(map(lambda m: (m[0], m[4]),  position_report)) # (modeS, callsign)
+
+        for icao_modeS in active_callsigns:        
+            
+            if icao_modeS[0] not in self.modeS_flight_map:
+
+                # TODO: create new flight if other flights in db match callsign, but too much time elapsed since last position report
+                flight_results = Flight.select(Flight.id).where(Flight.modeS == icao_modeS[0], Flight.callsign == icao_modeS[1])
+
+                if flight_results and len(flight_results) > 0:
+                    flight_id = flight_results[0].id
+                    #logger.info('present {:s} ({:s})'.format(icao_modeS[1],icao_modeS[0]))
+                else:                    
+                    flight_id = Flight.insert(modeS=icao_modeS[0], callsign=icao_modeS[1] ).execute() # TODO: insertMany
+                    #logger.info('inserted {:s} ({:s})'.format(icao_modeS[1],icao_modeS[0]))
+
+                self.modeS_flight_map[icao_modeS[0]] = flight_id
 
     def start(self):
         if self._t is None:

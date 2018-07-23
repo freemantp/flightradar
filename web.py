@@ -15,7 +15,7 @@ from adsb.acprocessor import AircaftProcessor
 from adsb.aircraft import Aircraft
 from adsb.config import Config
 from adsb.db.basestationdb import BaseStationDB
-from adsb.db.dbmodels import Position, database_proxy, DB_MODEL_CLASSES
+from adsb.db.dbmodels import Position, Flight, database_proxy, DB_MODEL_CLASSES
 from adsb.db.dbutil import DBUtils
 
 logging.basicConfig(level=logging.INFO)
@@ -52,10 +52,13 @@ def index():
             .order_by(fn.MAX(Position.timestmp).desc()))
 
     else:
-        result_set = (Position
-            .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
-            .group_by(Position.icao)
-            .order_by(fn.MAX(Position.timestmp).desc()))
+
+        result_set = Flight.select(Flight.callsign, Flight.modeS, Flight.archived)
+
+        # result_set = (Position
+        #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
+        #     .group_by(Position.icao)
+        #     .order_by(fn.MAX(Position.timestmp).desc()))
 
     return render_entries(result_set)
 
@@ -78,11 +81,11 @@ def render_entries(entries, archived = False):
     for entry in entries:
 
         bs_db = get_basestation_db()
-        aircraft = bs_db.query_aircraft(entry.icao)
-
+        aircraft = bs_db.query_aircraft(entry.modeS)
+        
         if not aircraft:
-            aircraft = Aircraft(entry.icao)
-        response.append((aircraft.__dict__, entry.timestmp, entry.archived))
+            aircraft = Aircraft(entry.modeS)
+        response.append((aircraft.__dict__, datetime.datetime.utcnow(), entry.archived, entry.callsign))
             
     metaInfo = {
         'updaterAlive' : updater.isAlive(),
@@ -90,7 +93,7 @@ def render_entries(entries, archived = False):
         'mode' : 'ModeSmixer2' if get_config().type == 'mm2' else 'VirtualRadar',
         'archived' : archived
     }    
-    
+
     return render_template('aircraft.html', airplanes=response, status=metaInfo, silhouette=updater.get_silhouete_params())
 
 @app.route("/pos/<icao24>") 

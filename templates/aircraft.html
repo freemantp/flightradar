@@ -19,6 +19,7 @@
                 <tr>
                     <th scope="col">Silhouette</th>
                     <th scope="col">Mode-S</th>
+                    <th scope="col">Callsign</th>
                     <th scope="col">Registration</th>
                     <th scope="col">ICAO</th>
                     <th scope="col">Type</th>
@@ -39,6 +40,7 @@
                         {% endif %}
                     </td>
                     <td>{{ ap[0]['modes_hex']}}</td>
+                    <td>{{ ap[3] }}</td>
                     <td>{{ ap[0]['reg'] }}</td>
                     <td>{{ ap[0]['type1'] }}</td>
                     <td>{{ ap[0]['type2'] }}</td>
