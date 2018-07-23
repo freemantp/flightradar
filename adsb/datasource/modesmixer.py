@@ -72,18 +72,23 @@ class ModeSMixer(RadarService):
         if flight_data:
             flights = []
             for flight in flight_data:
+                #print(flight)
                 if 'LA' in flight and 'LO' in flight and 'A' in flight:
 
                     icao24 = str(flight['I'])
                     lat = flight['LA'] if 'LA' in flight and flight['LA'] else None
                     lon = flight['LO'] if 'LO' in flight and flight['LO'] else None
                     alt = flight['A'] if 'A' in flight and flight['A'] else None
+                    callsign = flight['CS'] if 'CS' in flight and flight['CS'] else None
 
                     if lat and lon or alt:
-                        flights.append((icao24, lat, lon, alt))
+                        flights.append((icao24, lat, lon, alt, callsign))
             return flights
         else:
             return None
+
+    #def query_callsign(self, modeS):
+
 
     def get_silhouete_params(self):
         return {

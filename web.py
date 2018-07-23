@@ -15,7 +15,7 @@ from adsb.acprocessor import AircaftProcessor
 from adsb.aircraft import Aircraft
 from adsb.config import Config
 from adsb.db.basestationdb import BaseStationDB
-from adsb.db.dbmodels import Position, database_proxy
+from adsb.db.dbmodels import Position, database_proxy, DB_MODEL_CLASSES
 from adsb.db.dbutil import DBUtils
 
 logging.basicConfig(level=logging.INFO)
@@ -153,7 +153,7 @@ def init_db(conf):
         results_timeout=5.0)  # Max. time to wait for query to be executed.
 
     database_proxy.initialize(position_db)
-    position_db.create_tables([Position]) #init db
+    position_db.create_tables(DB_MODEL_CLASSES) #init db
     return position_db
 
 @atexit.register
