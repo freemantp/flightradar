@@ -79,6 +79,6 @@ class Flightradar24:
                 logger.error("error, waiting some time")
 
         if failcounter == self.maxretires:
-            logger.error("Too many failures for %s, giving up" % mode_s_hex)
+            logger.trace("Too many failures for %s, giving up" % mode_s_hex)
 
         return None
