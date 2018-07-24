@@ -27,8 +27,6 @@ class BazlLFR:
         self.known_replacements['AGUSTAWESTLAND S.P.A.'] = 'Agusta Westland'
         self.known_replacements['THE BOEING COMPANY'] = 'Boeing'
 
-        self.conn = HTTPSConnection(
-            "app02.bazl.admin.ch", context=ssl._create_unverified_context())
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
             "Content-type": "application/json",
@@ -63,9 +61,10 @@ class BazlLFR:
                 'sort_list': 'registration'
             }
 
-            self.conn.request('POST', "/web/bazl-backend/lfr",
+            conn = HTTPSConnection("app02.bazl.admin.ch", context=ssl._create_unverified_context())
+            conn.request('POST', "/web/bazl-backend/lfr",
                               body=json.dumps(post_body), headers=self.headers)
-            res = self.conn.getresponse()
+            res = conn.getresponse()
             if res.status == 200:
 
                 response_body = json.loads(res.read().decode())
@@ -101,9 +100,9 @@ class BazlLFR:
                 res.read()
                 raise ValueError(
                     'Unexpected http code {:s}'.format(res.status))
-        except RemoteDisconnected as rd:
+        except RemoteDisconnected:
             logger.exception("RemoteDisconnected")
-        except IncompleteRead as ir:
+        except IncompleteRead:
             logger.exception("IncompleteRead")
         except SocketError :
             logger.exception("SocketError")
