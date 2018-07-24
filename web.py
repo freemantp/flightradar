@@ -16,7 +16,7 @@ from adsb.aircraft import Aircraft
 from adsb.config import Config
 from adsb.db.basestationdb import BaseStationDB
 from adsb.db.dbmodels import Position, Flight, database_proxy, DB_MODEL_CLASSES
-from adsb.db.dbutil import DBUtils
+from adsb.db.dbrepository import DBRepository
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,12 +44,14 @@ def index():
 
     if get_config().delete_after > 0:
         threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+
+        result_set = Flight.select(Flight.callsign, Flight.modeS, Flight.archived)
         
-        result_set = (Position
-            .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
-            .where(Position.timestmp > threshold_data)
-            .group_by(Position.icao)
-            .order_by(fn.MAX(Position.timestmp).desc()))
+        # result_set = (Position
+        #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
+        #     .where(Position.timestmp > threshold_data)
+        #     .group_by(Position.icao)
+        #     .order_by(fn.MAX(Position.timestmp).desc()))
 
     else:
 
@@ -85,7 +87,7 @@ def render_entries(entries, archived = False):
         
         if not aircraft:
             aircraft = Aircraft(entry.modeS)
-        response.append((aircraft.__dict__, datetime.datetime.utcnow(), entry.archived, entry.callsign))
+        response.append((aircraft.__dict__, datetime.datetime.utcnow(), entry.archived, entry.callsign)) #TODO: real timestamps
             
     metaInfo = {
         'updaterAlive' : updater.isAlive(),
@@ -96,14 +98,17 @@ def render_entries(entries, archived = False):
 
     return render_template('aircraft.html', airplanes=response, status=metaInfo, silhouette=updater.get_silhouete_params())
 
-@app.route("/pos/<icao24>") 
-def get_positions(icao24):
+@app.route("/pos/<modeS_addr>") 
+def get_positions(modeS_addr):
 
-    flights = DBUtils.get_flights(icao24)
-    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), flights))
+    flights = DBRepository.get_flights(modeS_addr)
 
-    if entries:
-        return Response(json.dumps(entries), mimetype='application/json')
+    if len(flights) > 0:
+
+        positions = DBRepository.get_positions(flights[0])
+        pos_entries =[list(map(lambda p: [p.lat, p.lon, p.alt], positions))]
+ 
+        return Response(json.dumps(pos_entries), mimetype='application/json')
     else:
         return "Not found", 404
 
@@ -112,8 +117,8 @@ def get_all_positions():
 
     archived = get_boolean_arg('archived')
 
-    flights = DBUtils.get_all_flights(archived)
-    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), flights))    
+    positions = DBRepository.get_all_positions(archived)
+    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), positions))    
 
     return Response(json.dumps(entries), mimetype='application/json')
 

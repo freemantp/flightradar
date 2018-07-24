@@ -41,6 +41,8 @@ class AircaftProcessor(object):
 
     def cleanup_items(self):
 
+        return #TODO: enable cleanup
+
         if self.delete_after > 0:
             threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
             query = (Position.delete()
@@ -105,6 +107,7 @@ class AircaftProcessor(object):
                     #logger.info('inserted {:s} ({:s})'.format(icao_modeS[1],icao_modeS[0]))
 
                 self.modeS_flight_map[icao_modeS[0]] = flight_id
+            #TODO elif no callsign -> Update
 
     def start(self):
         if self._t is None:

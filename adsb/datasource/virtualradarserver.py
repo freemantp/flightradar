@@ -34,9 +34,10 @@ class VirtualRadarServer(RadarService):
                         lat = acjsn['Lat'] if 'Lat' in acjsn and acjsn['Lat'] else None
                         lon = acjsn['Long'] if 'Long' in acjsn and acjsn['Long'] else None
                         alt = acjsn['Alt'] if 'Alt' in acjsn and acjsn['Alt'] else None
+                        callsign = acjsn['Call'] if 'Call' in acjsn and acjsn['Call'] else None
 
                         if lat and lon or alt:
-                            flights.append((icao24, lat, lon, alt))
+                            flights.append((icao24, lat, lon, alt, callsign))
 
                     self.connection_alive = True
                     return flights
