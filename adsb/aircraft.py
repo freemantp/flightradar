@@ -45,4 +45,4 @@ class Aircraft:
         return self.is_complete() and not (self.operator is None)
 
     def __str__(self):
-        return "hex:%s, reg:%s, icao:%s, type:%s, op:%s" % (self.modes_hex, self.reg, self.type1, self.type2, self.operator)
+        return "mode-s:%s, reg:%s, icao:%s, type:%s, op:%s" % (self.modes_hex, self.reg, self.type1, self.type2, self.operator)

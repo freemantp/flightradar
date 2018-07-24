@@ -24,7 +24,7 @@ bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
 sources = [BazlLFR(), AdsbNL(adsb_config.data_folder), Flightradar24()]
 
-modes_queried = set()
+modeS_queried = set()
 not_found = set()
 
 update_count = 0
@@ -36,8 +36,8 @@ def signal_handler(signal, frame):
 
         if not_found:
             logger.info('not found: ')
-            for hex in not_found:
-                logger.info("\t" + hex)
+            for modeS in not_found:
+                logger.info("\t" + modeS)
 
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
@@ -67,43 +67,41 @@ def update_live():
         #logger.info("got %d live ones" % len(live_aircraft))
 
         if live_aircraft:
-            for hex in live_aircraft:
+            for modeS in live_aircraft:
 
-                aircraft = bs_db.query_aircraft(hex)
+                aircraft = bs_db.query_aircraft(modeS)
 
                 if aircraft and not aircraft.is_complete():
 
-                    if hex not in modes_queried and hex not in not_found:
+                    if modeS not in modeS_queried and modeS not in not_found:
 
-                        aircraft_response = query_modes(hex)
+                        aircraft_response = query_modes(modeS)
 
-                        modes_queried.add(hex)                        
+                        modeS_queried.add(modeS)
                         if aircraft_response:
-                            logger.info("fr24: %s" % aircraft_response)                            
                             aircraft.merge(aircraft_response)
-                            updated = bs_db.update_aircraft(aircraft)
+                            bs_db.update_aircraft(aircraft)
                             global update_count
                             update_count += 1
-                            logger.info("%s  - updated=%s" % (aircraft,updated))
+                            logger.info('[ Update ] {:s}'.format(str(aircraft)))
                         else:
-                            not_found.add(hex)
+                            not_found.add(modeS)
 
                 if not aircraft:
-                    aircraft_response = query_modes(hex)
+                    aircraft_response = query_modes(modeS)
 
-                    modes_queried.add(hex)
+                    modeS_queried.add(modeS)
                     if aircraft_response:
-                        inserted = bs_db.insert_aircraft(aircraft_response)
+                        bs_db.insert_aircraft(aircraft_response)
                         global insert_count
                         insert_count += 1
-                        logger.info("%s  - inserted=%s" % (aircraft_response, inserted))
+                        logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
 
-        #logger.info("sleeping")
-        time.sleep(20)
+        time.sleep(2)
 
 def read_csv():
     for plane in Tabular.parse_csv(adsb_config.data_folder + r'\\Mil.csv'):
-        aircraft = bs_db.query_aircraft(plane.modes_hex)
+        aircraft = bs_db.query_aircraft(plane.modes_modeS)
         if aircraft:
             if not aircraft.is_complete():
                 bs_db.update_aircraft(plane)
