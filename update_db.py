@@ -47,11 +47,11 @@ def query_modes(modeS_address):
     aircraft = None
 
     for s in sources:
-        if s.accept(modeS_address):             
+        if s.accept(modeS_address):
             aircraft = s.query_aircraft(modeS_address)
             logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))
             if aircraft:
-                return aircraft            
+                return aircraft
                  
     return None
 
@@ -97,7 +97,7 @@ def update_live():
                         insert_count += 1
                         logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
 
-        time.sleep(2)
+        time.sleep(20)
 
 def read_csv():
     for plane in Tabular.parse_csv(adsb_config.data_folder + r'\\Mil.csv'):
