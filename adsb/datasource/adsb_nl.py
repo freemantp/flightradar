@@ -18,8 +18,7 @@ class AdsbNL:
     """ ads-b.nl Queries """
 
     def __init__(self, config_folder):
-
-        self.conn = HTTPConnection('www.ads-b.nl')
+        
         self.headers = {
             'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
             "Content-type": "application/json",
@@ -54,9 +53,9 @@ class AdsbNL:
         """ queries aircraft data """
 
         try:
-            
-            self.conn.request('GET', '/aircraft.php?id_aircraft={:d}'.format(int(mode_s_hex, 16)), headers=self.headers)
-            res = self.conn.getresponse()
+            conn = HTTPConnection('www.ads-b.nl')
+            conn.request('GET', '/aircraft.php?id_aircraft={:d}'.format(int(mode_s_hex, 16)), headers=self.headers)
+            res = conn.getresponse()
             if res.status == 200:
 
                 data = res.read().decode()
@@ -97,5 +96,7 @@ class AdsbNL:
             logger.error("RemoteDisconnected")
         except IncompleteRead:
             logger.error("IncompleteRead")
+        except BrokenPipeError:
+            logger.error("BrokenPipeError")            
 
         return None
