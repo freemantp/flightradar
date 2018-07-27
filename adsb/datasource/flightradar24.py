@@ -72,11 +72,15 @@ class Flightradar24:
             except RemoteDisconnected:
                 failcounter += 1
                 time.sleep(failcounter * 5)
-                logger.error("error, waiting some time")
+                logger.error("RemoteDisconnected, waiting some time")
             except IncompleteRead:
                 failcounter += 1
                 time.sleep(failcounter * 3)
-                logger.error("error, waiting some time")
+                logger.error("IncompleteRead, waiting some time")
+            except ConnectionError:
+                failcounter += 1
+                time.sleep(failcounter)
+                logger.error("ConnectionError, waiting some time")                
 
         # if failcounter == self.maxretires:
         #     logger.warning("Too many failures for %s, giving up" % mode_s_hex)

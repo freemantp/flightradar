@@ -1,6 +1,7 @@
 from adsb.datasource.flightradar24 import Flightradar24
 from adsb.datasource.bazllfr import BazlLFR
 from adsb.datasource.adsb_nl import AdsbNL
+from adsb.datasource.openskynet import OpenskyNet
 from adsb.datasource.modesmixer import ModeSMixer
 from adsb.datasource.virtualradarserver import VirtualRadarServer
 from adsb.db.basestationdb import BaseStationDB
@@ -22,7 +23,7 @@ adsb_config.from_file('config.json')
 
 bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
-sources = [BazlLFR(), AdsbNL(adsb_config.data_folder), Flightradar24()]
+sources = [BazlLFR(), OpenskyNet(), AdsbNL(adsb_config.data_folder), Flightradar24()]
 
 modeS_queried = set()
 not_found = set()
@@ -49,7 +50,7 @@ def query_modes(modeS_address):
     for s in sources:
         if s.accept(modeS_address):
             aircraft = s.query_aircraft(modeS_address)
-            logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))
+            logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))            
             if aircraft:
                 return aircraft
                  
@@ -64,38 +65,37 @@ def update_live():
 
     while True:
         live_aircraft = msm.query_live_icao24()
-        #logger.info("got %d live ones" % len(live_aircraft))
 
         if live_aircraft:
             for modeS in live_aircraft:
 
-                aircraft = bs_db.query_aircraft(modeS)
+                if modeS not in modeS_queried and modeS not in not_found:
 
-                if aircraft and not aircraft.is_complete():
-
-                    if modeS not in modeS_queried and modeS not in not_found:
+                    aircraft_db = bs_db.query_aircraft(modeS)
+                    if aircraft_db and not aircraft_db.is_complete():                    
 
                         aircraft_response = query_modes(modeS)
-
                         modeS_queried.add(modeS)
+
                         if aircraft_response:
-                            aircraft.merge(aircraft_response)
-                            bs_db.update_aircraft(aircraft)
-                            global update_count
-                            update_count += 1
-                            logger.info('[ Update ] {:s}'.format(str(aircraft)))
+                            aircraft_db.merge(aircraft_response)
+                            if bs_db.update_aircraft(aircraft_db):
+                                global update_count
+                                update_count += 1
+                                logger.info('[ Update ] {:s}'.format(str(aircraft_db)))
                         else:
                             not_found.add(modeS)
 
-                if not aircraft:
-                    aircraft_response = query_modes(modeS)
+                    elif not aircraft_db:
 
-                    modeS_queried.add(modeS)
-                    if aircraft_response:
-                        bs_db.insert_aircraft(aircraft_response)
-                        global insert_count
-                        insert_count += 1
-                        logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
+                        aircraft_response = query_modes(modeS)
+                        modeS_queried.add(modeS)
+
+                        if aircraft_response:
+                            if bs_db.insert_aircraft(aircraft_response):
+                                global insert_count
+                                insert_count += 1
+                                logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
 
         time.sleep(20)
 
