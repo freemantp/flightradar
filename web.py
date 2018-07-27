@@ -45,7 +45,8 @@ def index():
     if get_config().delete_after > 0:
         threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
 
-        result_set = Flight.select(Flight.callsign, Flight.modeS, Flight.archived)
+        result_set = (Flight.select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+                            .order_by(Flight.last_contact.desc()))
         
         # result_set = (Position
         #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
@@ -55,7 +56,8 @@ def index():
 
     else:
 
-        result_set = Flight.select(Flight.callsign, Flight.modeS, Flight.archived)
+        result_set = (Flight.select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+                            .order_by(Flight.last_contact.desc()))
 
         # result_set = (Position
         #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
@@ -87,7 +89,7 @@ def render_entries(entries, archived = False):
         
         if not aircraft:
             aircraft = Aircraft(entry.modeS)
-        response.append((aircraft.__dict__, datetime.datetime.utcnow(), entry.archived, entry.callsign)) #TODO: real timestamps
+        response.append((aircraft.__dict__, entry.last_contact, entry.archived, entry.callsign)) #TODO: real timestamps
             
     metaInfo = {
         'updaterAlive' : updater.isAlive(),

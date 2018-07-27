@@ -7,6 +7,7 @@ from adsb.datasource.modesmixer import ModeSMixer
 from adsb.datasource.virtualradarserver import VirtualRadarServer
 from adsb.util.modes_util import ModesUtil
 from adsb.db.dbmodels import Position, Flight
+from adsb.db.dbrepository import DBRepository
 
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
@@ -41,16 +42,12 @@ class AircaftProcessor(object):
 
     def cleanup_items(self):
 
-        return #TODO: enable cleanup
-
         if self.delete_after > 0:
-            threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
-            query = (Position.delete()
-                            .where((Position.timestmp < threshold_data) & (Position.archived == False) ) )
+            delete_timestamp = datetime.datetime.utcnow() - datetime.timedelta(minutes=self.delete_after)
 
-            num_records_deleted = query.execute()
-            if num_records_deleted > 0:
-                logger.info('Deleting {:d} old records from the datbase'.format(num_records_deleted))
+            for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
+                DBRepository.delete_flight_and_positions(flight.id)
+                logger.info('Deleted flight {:s} (id={:d})'.format(str(flight.callsign), flight.id))
 
     def _run(self):
 
@@ -63,7 +60,7 @@ class AircaftProcessor(object):
                     filtered_pos = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
                 else:
                     filtered_pos = positions
-                    #filtered_pos = list(filter(lambda p : True or self._mil_ranges.is_swiss(p[0]), positions))
+                    #filtered_pos = list(filter(lambda p : self._mil_ranges.is_swiss(p[0]), positions))
 
                 self.update_callsigns(filtered_pos)
 
@@ -73,12 +70,13 @@ class AircaftProcessor(object):
 
                 # Creatr tuples suitable for DB insertion
                 db_entries = list(map(lambda m : (self.modeS_flight_map[m[0]], m[1], m[2], m[3]), pos_array))
-                    
+
                 if db_entries:
                     fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
                     for i in range(0, len(db_entries), self._insert_batch_size):
                         Position.insert_many(db_entries[i:i+self._insert_batch_size], fields=fields).execute()
 
+                
             self.cleanup_items()
 
         except ResultTimeout:
