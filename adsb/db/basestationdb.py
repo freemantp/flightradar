@@ -41,8 +41,9 @@ class BaseStationDB:
                 sql = "UPDATE Aircraft set Registration = (?) WHERE ModeS = (?);" 
                 self.cur.execute(sql, (aircraft.reg, aircraft.modes_hex)  )
                 return True
-        except sqlite3.OperationalError:
-            logger.error("Could not update aircraft - %s" % aircraft.str())
+        except sqlite3.OperationalError as oe:
+            logger.exception(oe)
+            logger.error('Could not update aircraft: {:s}'.format(str(aircraft)))
             return False
 
     def insert_aircraft(self, acrft):
@@ -52,7 +53,8 @@ class BaseStationDB:
                 sql = "INSERT INTO Aircraft (ModeS,FirstCreated,LastModified,Registration,ICAOTypeCode,Type,RegisteredOwners) VALUES('%s','%s','%s','%s','%s','%s','%s');" % (acrft.modes_hex,timestamp,timestamp,acrft.reg, acrft.type1, acrft.type2, acrft.operator)
                 self.cur.execute(sql)
                 return True
-            except sqlite3.OperationalError:
-                logger.error("Could not update aircraft - {:s}".format(acrft.str()))
+            except sqlite3.OperationalError as oe:
+                logger.exception(oe)
+                logger.error('Could not insert aircraft: {:s}'.format(str(acrft)))
         
         return False

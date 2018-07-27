@@ -27,6 +27,7 @@ class BazlLFR:
         self.known_replacements['AGUSTAWESTLAND S.P.A.'] = 'Agusta Westland'
         self.known_replacements['THE BOEING COMPANY'] = 'Boeing'
         self.known_replacements['ROBINSON HELICOPTER COMPANY'] = 'Robinson'
+        self.known_replacements['PILATUS AIRCRAFT LTD.'] = 'Pilatus'
 
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
