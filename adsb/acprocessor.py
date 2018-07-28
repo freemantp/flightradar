@@ -94,8 +94,9 @@ class AircaftProcessor(object):
             
             if icao_modeS[0] not in self.modeS_flight_map:
 
-                # TODO: create new flight if other flights in db match callsign, but too much time elapsed since last position report
-                flight_results = Flight.select(Flight.id).where(Flight.modeS == icao_modeS[0], Flight.callsign == icao_modeS[1])
+                # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
+                thresh_timestmp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+                flight_results = Flight.select(Flight.id).where(Flight.modeS == icao_modeS[0], Flight.callsign == icao_modeS[1], Flight.last_contact > thresh_timestmp)
 
                 if flight_results and len(flight_results) > 0:
                     flight_id = flight_results[0].id

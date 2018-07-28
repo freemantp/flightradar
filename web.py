@@ -89,7 +89,7 @@ def render_entries(entries, archived = False):
         
         if not aircraft:
             aircraft = Aircraft(entry.modeS)
-        response.append((aircraft.__dict__, entry.last_contact, entry.archived, entry.callsign)) #TODO: real timestamps
+        response.append((aircraft.__dict__, entry.last_contact, entry.archived, entry.callsign))
             
     metaInfo = {
         'updaterAlive' : updater.isAlive(),

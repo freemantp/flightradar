@@ -61,7 +61,7 @@ def update_live():
     if adsb_config.type == 'mm2':
         msm = ModeSMixer(adsb_config.service_url)
     else:
-         raise ValueError('Service type {:s} is not supported'.format(adsb_config.type)) #TODO enable
+         raise ValueError('Service type {:s} is not supported'.format(adsb_config.type)) #TODO enable VRS
 
     while True:
         live_aircraft = msm.query_live_icao24()

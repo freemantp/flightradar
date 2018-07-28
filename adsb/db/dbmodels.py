@@ -6,7 +6,7 @@ database_proxy = pw.Proxy()
 class Flight(pw.Model):
     id = pw.AutoField
     callsign = pw.CharField(null = True)
-    modeS = pw.FixedCharField(max_length=6) # TODO Create index
+    modeS = pw.FixedCharField(max_length=6)
     archived = pw.BooleanField(default=False)
     first_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
     last_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
@@ -31,6 +31,9 @@ class Position(pw.Model):
     def __repr__(self):
         return 'flight={:d} pos=({:f},{:f},{:d}) at={:s}'.format( self.flight_fk, self.lat, self.lon, self.alt, str(self.timestmp) )
 
-triggger_create = "CREATE TRIGGER flight_timestamp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END"
+#TODO run at create time -> peewee ?
+triggger_create = 'CREATE TRIGGER flight_timestamp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
+
+flight_index = "CREATE INDEX 'ModeSaddr_IDX' ON 'flight' ( 'modeS' )"
 
 DB_MODEL_CLASSES = [Flight, Position]
