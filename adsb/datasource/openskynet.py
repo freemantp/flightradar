@@ -50,8 +50,10 @@ class OpenskyNet:
                     modeS = aircraft['icao24'].upper()
                     reg = aircraft['registration']
                     type1 = aircraft['typecode']
-                    type2 = '{:s} {:s}'.format(aircraft['manufacturerName'], aircraft['model'])
-                    op = aircraft['operator']
+
+                    type2 = (aircraft['model'] 
+                                if aircraft['model'].startswith(aircraft['manufacturerName']) 
+                                else  '{:s} {:s}'.format(aircraft['manufacturerName'], aircraft['model']) )
 
                     if modeS and reg and type1 and aircraft['model']:
                         return Aircraft(modeS, reg, type1, type2, op)
