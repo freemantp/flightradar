@@ -1,12 +1,14 @@
 import peewee as pw
 import datetime
 
+from playhouse.sqliteq import SqliteQueueDatabase
+
 database_proxy = pw.Proxy()
 
 class Flight(pw.Model):
     id = pw.AutoField
     callsign = pw.CharField(null = True)
-    modeS = pw.FixedCharField(max_length=6)
+    modeS = pw.FixedCharField(max_length=6, index=True)
     archived = pw.BooleanField(default=False)
     first_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
     last_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
@@ -31,9 +33,21 @@ class Position(pw.Model):
     def __repr__(self):
         return 'flight={:d} pos=({:f},{:f},{:d}) at={:s}'.format( self.flight_fk, self.lat, self.lon, self.alt, str(self.timestmp) )
 
-#TODO run at create time -> peewee ?
-triggger_create = 'CREATE TRIGGER flight_timestamp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
-
-flight_index = "CREATE INDEX 'ModeSaddr_IDX' ON 'flight' ( 'modeS' )"
-
 DB_MODEL_CLASSES = [Flight, Position]
+
+TRIGGER_CREATE = 'CREATE TRIGGER flight_timestmp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
+
+def init_db_schema(data_folder):
+
+    position_db = SqliteQueueDatabase(
+        '{:s}/positions.db'.format(data_folder),
+        use_gevent=False,  # Use the standard library "threading" module.
+        autostart=True,  # The worker thread now must be started manually.
+        queue_max_size=64,  # Max. # of pending writes that can accumulate.
+        results_timeout=5.0)  # Max. time to wait for query to be executed.
+
+    database_proxy.initialize(position_db)
+    position_db.create_tables(DB_MODEL_CLASSES) #init db
+    position_db.execute_sql(TRIGGER_CREATE)
+
+    return position_db

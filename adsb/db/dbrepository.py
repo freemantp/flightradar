@@ -32,17 +32,19 @@ class DBRepository:
         return Flight.select().where(Flight.modeS == modeS_addr)
 
     @staticmethod
-    def get_all_positions(archived=False):
+    def get_all_positions(is_archived=False):
 
-        if archived:
-            query = (Position.select()
-                             .order_by(Position.flight_fk, Position.timestmp.asc()) )
-        else:
-            query = (Position.select()
-                             #.where(Position.archived == False) TODO: archived?
-                             .order_by(Position.flight_fk, Position.timestmp.asc()))
+        flight_data = []
 
-        return DBRepository.split_flights(query) #TODO: flights are already split in db!
+        for flight in Flight.select(Flight.id).where(Flight.archived == is_archived):
+            
+            pos = (Position.select()
+                                .where(Position.flight_fk == flight.id )
+                                .order_by(Position.flight_fk, Position.timestmp.asc()) )
+
+            flight_data.append(pos)
+
+        return flight_data
 
     @staticmethod
     def get_positions(flight_id):

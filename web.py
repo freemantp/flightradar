@@ -8,14 +8,14 @@ from pytz import timezone
 from dateutil import tz
 
 from flask import Flask, Response, g, jsonify, render_template, request
-from peewee import SqliteDatabase, fn
-from playhouse.sqliteq import SqliteQueueDatabase
+from peewee import fn
+
 
 from adsb.acprocessor import AircaftProcessor
 from adsb.aircraft import Aircraft
 from adsb.config import Config
 from adsb.db.basestationdb import BaseStationDB
-from adsb.db.dbmodels import Position, Flight, database_proxy, DB_MODEL_CLASSES
+from adsb.db.dbmodels import init_db_schema, Position, Flight
 from adsb.db.dbrepository import DBRepository
 
 logging.basicConfig(level=logging.INFO)
@@ -153,19 +153,6 @@ def datetimefilter(value, format="%d.%m.%Y %H:%M"):
     local_time = utctime.astimezone(tz.gettz('Europe/Zurich'))
     return local_time.strftime(format)
 
-def init_db(conf):
-
-    position_db = SqliteQueueDatabase(
-        '{:s}/positions.db'.format(conf.data_folder),
-        use_gevent=False,  # Use the standard library "threading" module.
-        autostart=True,  # The worker thread now must be started manually.
-        queue_max_size=64,  # Max. # of pending writes that can accumulate.
-        results_timeout=5.0)  # Max. time to wait for query to be executed.
-
-    database_proxy.initialize(position_db)
-    position_db.create_tables(DB_MODEL_CLASSES) #init db
-    return position_db
-
 @atexit.register
 def _stop_worker_threads():
     pos_db.stop()    
@@ -182,7 +169,7 @@ if __name__ == '__main__':
     conf = None
     with app.app_context():
          conf = get_config()
-    pos_db = init_db(conf)
+    pos_db = init_db_schema(conf.data_folder)
 
     updater = AircaftProcessor(conf, pos_db)
     updater.start()
