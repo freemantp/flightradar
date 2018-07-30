@@ -57,10 +57,9 @@ class AircaftProcessor(object):
             if positions:
                 # Filter for military icaos
                 if self._mil_only:
-                    filtered_pos = filter(lambda p : self._mil_ranges.is_military(p[0]), positions)
+                    filtered_pos = list(filter(lambda p : self._mil_ranges.is_military(p[0]), positions))
                 else:
                     filtered_pos = positions
-                    #filtered_pos = list(filter(lambda p : self._mil_ranges.is_swiss(p[0]), positions))
 
                 self.update_callsigns(filtered_pos)
 
@@ -70,7 +69,7 @@ class AircaftProcessor(object):
 
                 # Create tuples suitable for DB insertion
                 db_entries = list(map(lambda m : (self.modeS_flight_map[m[0]], m[1], m[2], m[3]), pos_array))
-
+    
                 if db_entries:
                     fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
                     for i in range(0, len(db_entries), self._insert_batch_size):
@@ -101,7 +100,7 @@ class AircaftProcessor(object):
             if icao_modeS[0] in self.modeS_flight_map:
                 if flight_results and len(flight_results) > 0:
                     if flight_results[0].callsign is None and icao_modeS[1]: #Update flights without callsigns
-                        Flight.update(callsign = flight_results[1]).where(Flight.id == flight_results[0].id)
+                        Flight.update(callsign = icao_modeS[1]).where(Flight.id == flight_results[0].id)
             else:
                 if flight_results and len(flight_results) > 0:
                     flight_id = flight_results[0].id
