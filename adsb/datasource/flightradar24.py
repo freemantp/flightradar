@@ -1,4 +1,4 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
+from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead, CannotSendRequest
 import json
 import time
 import logging
@@ -80,7 +80,11 @@ class Flightradar24:
             except ConnectionError:
                 failcounter += 1
                 time.sleep(failcounter)
-                logger.error("ConnectionError, waiting some time")                
+                logger.error("ConnectionError, waiting some time")
+            except CannotSendRequest:
+                failcounter += 1
+                time.sleep(failcounter)
+                logger.error("CannotSendRequest, waiting some time")
 
         # if failcounter == self.maxretires:
         #     logger.warning("Too many failures for %s, giving up" % mode_s_hex)

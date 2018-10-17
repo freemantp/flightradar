@@ -101,13 +101,14 @@ class AircaftProcessor(object):
                 if flight_results and len(flight_results) > 0:
                     if flight_results[0].callsign is None and icao_modeS[1]: #Update flights without callsigns
                         Flight.update(callsign = icao_modeS[1]).where(Flight.id == flight_results[0].id)
+                        logger.info('updated {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None" ,icao_modeS[0]))
             else:
                 if flight_results and len(flight_results) > 0:
                     flight_id = flight_results[0].id
-                    #logger.info('present {:s} ({:s})'.format(icao_modeS[1],icao_modeS[0]))
+                    logger.info('present in db {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None", icao_modeS[0]))
                 else:                    
                     flight_id = Flight.insert(modeS=icao_modeS[0], callsign=icao_modeS[1] ).execute()
-                    #logger.info('inserted {:s} ({:s})'.format(icao_modeS[1],icao_modeS[0]))
+                    logger.info('inserted {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None" ,icao_modeS[0] ))
 
                 self.modeS_flight_map[icao_modeS[0]] = flight_id
 
