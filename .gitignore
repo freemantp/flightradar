@@ -2,5 +2,7 @@ venv/*
 *.pyc
 .vscode/
 resources/*.db
+resources/*.db-shm
+resources/*.db-wal
 resources/*.sqb
 config*.json
