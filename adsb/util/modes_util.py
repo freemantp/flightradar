@@ -22,7 +22,7 @@ class ModesUtil:
             csvfile.close()
 
     def is_military(self, icao24):
-        
+
         """ Returns true if the icao code military range """
         icao_nr = int(icao24, 16)
 
@@ -36,7 +36,7 @@ class ModesUtil:
 
         """ Returns true if the icao code is in the Swiss military range """
         return icao >= 0x4B7000 and icao <= 0x4B7FFF
-    
+
     @staticmethod
     def is_swiss(icaohex):
         if icaohex and icaohex[0:2] == "4B":
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
             for line in msm.query_live_icao24():
                 handle_ac(line.strip())
-            
+
             time.sleep(10)
 
     run_live()

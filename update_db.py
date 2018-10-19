@@ -50,10 +50,10 @@ def query_modes(modeS_address):
     for s in sources:
         if s.accept(modeS_address):
             aircraft = s.query_aircraft(modeS_address)
-            logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))            
+            logger.info('[ {:s} ] -> {:s} ({:s})'.format(s.name(), modeS_address, ("success" if aircraft else "failed") ))
             if aircraft:
                 return aircraft
-                 
+
     return None
 
 def update_live():
@@ -72,7 +72,7 @@ def update_live():
                 if modeS not in modeS_queried and modeS not in not_found:
 
                     aircraft_db = bs_db.query_aircraft(modeS)
-                    if aircraft_db and not aircraft_db.is_complete():                    
+                    if aircraft_db and not aircraft_db.is_complete():
 
                         aircraft_response = query_modes(modeS)
                         modeS_queried.add(modeS)
