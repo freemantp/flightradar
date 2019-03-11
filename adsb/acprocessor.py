@@ -51,10 +51,11 @@ class AircaftProcessor(object):
 
     def _run(self):
 
-        positions = self._service.query_live_positions()        
+        positions = self._service.query_live_positions(False)
 
         try:
             if positions:
+
                 # Filter for military icaos
                 if self._mil_only:
                     filtered_pos = list(filter(lambda p : self._mil_ranges.is_military(p[0]), positions))
@@ -63,7 +64,7 @@ class AircaftProcessor(object):
 
                 self.update_callsigns(filtered_pos)
 
-                # Filter sempty positons
+                # Filter empty positons
                 non_empty_pos = filter(lambda p : p[1] and p[2], filtered_pos)
                 pos_array = list(non_empty_pos)
 

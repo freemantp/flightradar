@@ -64,7 +64,7 @@ class ModeSMixer(RadarService):
         else:
             return None
 
-    def query_live_positions(self):
+    def query_live_positions(self, filter_incomplete=True):
         """ Returns a list of Mode-S adresses with current position information"""
 
         flight_data = self.get_flight_info()
@@ -81,8 +81,9 @@ class ModeSMixer(RadarService):
                     alt = flight['A'] if 'A' in flight and flight['A'] else None
                     callsign = flight['CS'] if 'CS' in flight and flight['CS'] else None
 
-                    if lat and lon or alt:
+                    if (lat and lon or alt) or (not filter_incomplete and callsign):
                         flights.append((icao24, lat, lon, alt, callsign))
+
             return flights
         else:
             return None
