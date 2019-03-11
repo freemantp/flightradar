@@ -41,6 +41,9 @@ class Aircraft:
     def is_complete(self):
         return self.has_type() and not (self.reg is None)
 
+    def is_empty(self):
+        return not self.reg and not self.type1 and not self.type2 and not self.operator
+
     def is_complete2(self):
         return self.is_complete() and not (self.operator is None)
 

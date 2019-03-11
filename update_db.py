@@ -99,21 +99,23 @@ def update_live():
 
         time.sleep(20)
 
-def read_csv():
-    for plane in Tabular.parse_csv(adsb_config.data_folder + r'\\Mil.csv'):
-        aircraft = bs_db.query_aircraft(plane.modes_modeS)
+def read_csv(file):
+    for plane in Tabular.parse_csv(adsb_config.data_folder + file):
+        aircraft = bs_db.query_aircraft(plane.modes_hex)
         if aircraft:
-            if not aircraft.is_complete():
+            if not aircraft.is_complete() and not aircraft.is_empty():
                 bs_db.update_aircraft(plane)
-                logger.info("%s updated" % plane.reg)
-            else:
-                logger.info(plane)
-                logger.info(aircraft)
-                logger.info("\n")
-        else:
+                logger.info('Updated: {:s}'.format(str(plane)))
+        else:            
             bs_db.insert_aircraft(plane)
-            logger.info("%s inserted" % plane.reg)
+            logger.info('Inserted: {:s}'.format(str(plane)))
 
 if __name__ == '__main__':
-    logger.info("Starting update")
-    update_live()
+
+    if len(sys.argv) == 1:
+        logger.info("Starting live update")
+        update_live()
+    elif len(sys.argv) == 2 and sys.argv[1] == '--csv':
+        read_csv(r'data.csv')
+    else:
+        print("Usage: {:s} [--csv]".format(sys.argv[0]))
