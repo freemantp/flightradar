@@ -47,7 +47,7 @@ class AircaftProcessor(object):
 
             for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
                 DBRepository.delete_flight_and_positions(flight.id)
-                logger.info('Deleted flight {:s} (id={:d})'.format(str(flight.callsign), flight.id))
+                #logger.info('Deleted flight {:s} (id={:d})'.format(str(flight.callsign), flight.id))
 
     def _run(self):
 
@@ -57,12 +57,9 @@ class AircaftProcessor(object):
             if positions:
 
                 # Filter for military icaos
-                if self._mil_only:
-                    filtered_pos = list(filter(lambda p : self._mil_ranges.is_military(p[0]), positions))
-                else:
-                    filtered_pos = positions
+                filtered_pos = list(filter(lambda p : self._mil_ranges.is_military(p[0]), positions)) if self._mil_only else positions
 
-                self.update_callsigns(filtered_pos)
+                self.update_flights(filtered_pos)
 
                 # Filter empty positons
                 non_empty_pos = filter(lambda p : p[1] and p[2], filtered_pos)
@@ -85,33 +82,37 @@ class AircaftProcessor(object):
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()
 
-    def update_callsigns(self, position_report):
+    def update_flights(self, flights):
 
         # None for a callsign is allowed
-        active_callsigns = list(map(lambda m: (m[0], m[4]),  position_report)) # (modeS, callsign)
+        active_flights = list(map(lambda m: (m[0], m[4]),  flights)) # (modeS, callsign)
 
-        for icao_modeS in active_callsigns:
+        for modeS_callsgn in active_flights:
 
             # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
             thresh_timestmp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10) 
-            
-            flight_results = (Flight.select(Flight.id)
-                                    .where(Flight.modeS == icao_modeS[0], Flight.callsign == icao_modeS[1], Flight.last_contact > thresh_timestmp))
 
-            if icao_modeS[0] in self.modeS_flight_map:
-                if flight_results and len(flight_results) > 0:
-                    if flight_results[0].callsign is None and icao_modeS[1]: #Update flights without callsigns
-                        Flight.update(callsign = icao_modeS[1]).where(Flight.id == flight_results[0].id)
-                        logger.info('updated {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None" ,icao_modeS[0]))
+            if modeS_callsgn[0] in self.modeS_flight_map:
+
+                flight_results = (Flight.select(Flight.id)
+                        .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
+   
+                if flight_results and modeS_callsgn[1]:
+                    Flight.update(callsign = modeS_callsgn[1]).where(Flight.id == flight_results[0].id)
+                    logger.info('updated {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None" ,modeS_callsgn[0]))
             else:
-                if flight_results and len(flight_results) > 0:
-                    flight_id = flight_results[0].id
-                    logger.info('present in db {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None", icao_modeS[0]))
-                else:                    
-                    flight_id = Flight.insert(modeS=icao_modeS[0], callsign=icao_modeS[1] ).execute()
-                    logger.info('inserted {:s} ({:s})'.format(icao_modeS[1] if icao_modeS[1] else "None" ,icao_modeS[0] ))
 
-                self.modeS_flight_map[icao_modeS[0]] = flight_id
+                flight_results = (Flight.select(Flight.id)
+                        .where(Flight.modeS == modeS_callsgn[0], Flight.callsign == modeS_callsgn[1], Flight.last_contact > thresh_timestmp))
+   
+                if flight_results:
+                    flight_id = flight_results[0].id
+                    logger.info('present in db {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
+                else:
+                    flight_id = Flight.insert(modeS=modeS_callsgn[0], callsign=modeS_callsgn[1] ).execute()
+                    logger.info('inserted {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0] ))
+
+                self.modeS_flight_map[modeS_callsgn[0]] = flight_id
 
     def start(self):
         if self._t is None:
