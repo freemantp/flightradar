@@ -98,7 +98,7 @@ class AircaftProcessor(object):
                         .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
    
                 if flight_results and modeS_callsgn[1]:
-                    Flight.update(callsign = modeS_callsgn[1]).where(Flight.id == flight_results[0].id)
+                    Flight.update(callsign = modeS_callsgn[1]).where(Flight.id == flight_results[0].id).execute()
                     logger.info('updated {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None" ,modeS_callsgn[0]))
             else:
 
