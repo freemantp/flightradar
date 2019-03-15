@@ -40,10 +40,8 @@ class ModeSMixer(RadarService):
             else:
                 logger.error("[ModeSMixer] unexpected HTTP response: {:d}".format(res.code))
 
-        except ConnectionRefusedError as cre:
-            logger.error(cre)
-        except OSError as e:
-            logger.error(e)
+        except (ConnectionRefusedError, OSError) as err:
+            logger.error(err)
 
         if conn:
             conn.close()
@@ -64,16 +62,26 @@ class ModeSMixer(RadarService):
         else:
             return None
 
-    def query_live_positions(self, filter_incomplete=True):
-        """ Returns a list of Mode-S adresses with current position information"""
+    def query_live_flights(self, filter_incomplete=True):
+        """ 
+        Retrieve active Mode-S adresses with current properties
+
+        Returns:
+            A list of tuples with active flights
+
+        Args:
+            filter_incomplete (bool): filter flights w/o positional information
+        
+        """
 
         flight_data = self.get_flight_info()
 
         if flight_data:
             flights = []
+
             for flight in flight_data:
-                #print(flight)
-                if 'LA' in flight and 'LO' in flight and 'A' in flight:
+  
+                if ('LA' in flight and 'LO' in flight and 'A') in flight or 'CS' in flight:
 
                     icao24 = str(flight['I'])
                     lat = flight['LA'] if 'LA' in flight and flight['LA'] else None

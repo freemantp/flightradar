@@ -11,7 +11,7 @@ class VirtualRadarServer(RadarService):
     def __init__(self, url):
         RadarService.__init__(self, url)
 
-    def query_live_positions(self):
+    def query_live_flights(self, filter_incomplete=True):
         """ Returns a list of Mode-S adresses with current position information"""
 
         conn = self.get_connection()
@@ -36,7 +36,7 @@ class VirtualRadarServer(RadarService):
                         alt = acjsn['Alt'] if 'Alt' in acjsn and acjsn['Alt'] else None
                         callsign = acjsn['Call'] if 'Call' in acjsn and acjsn['Call'] else None
 
-                        if lat and lon or alt:
+                        if (lat and lon or alt) or (not filter_incomplete and callsign):
                             flights.append((icao24, lat, lon, alt, callsign))
 
                     self.connection_alive = True
@@ -48,10 +48,8 @@ class VirtualRadarServer(RadarService):
             else:
                 logger.error("[VRS] unexpected HTTP response: {:d}".format(res.code))
 
-        except ConnectionRefusedError as cre:
-            logger.error(cre)
-        except OSError as e:
-            logger.error(e)
+        except (ConnectionRefusedError, OSError) as err:
+            logger.error(err)
 
         if conn:
             conn.close()    

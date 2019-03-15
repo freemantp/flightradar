@@ -51,7 +51,7 @@ class AircaftProcessor(object):
 
     def _run(self):
 
-        positions = self._service.query_live_positions(False)
+        positions = self._service.query_live_flights(False)
 
         try:
             if positions:
