@@ -78,6 +78,8 @@ class AircaftProcessor(object):
 
         except ResultTimeout:
             logger.info('Database timeout')
+        except:
+            logger.exception("An error occured")
 
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()

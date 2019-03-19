@@ -71,31 +71,34 @@ def update_live():
 
                 if modeS not in modeS_queried and modeS not in not_found:
 
-                    aircraft_db = bs_db.query_aircraft(modeS)
-                    if aircraft_db and not aircraft_db.is_complete():
+                    try:
+                        aircraft_db = bs_db.query_aircraft(modeS)
+                        if aircraft_db and not aircraft_db.is_complete():
 
-                        aircraft_response = query_modes(modeS)
-                        modeS_queried.add(modeS)
+                            aircraft_response = query_modes(modeS)
+                            modeS_queried.add(modeS)
 
-                        if aircraft_response:
-                            aircraft_db.merge(aircraft_response)
-                            if bs_db.update_aircraft(aircraft_db):
-                                global update_count
-                                update_count += 1
-                                logger.info('[ Update ] {:s}'.format(str(aircraft_db)))
-                        else:
-                            not_found.add(modeS)
+                            if aircraft_response:
+                                aircraft_db.merge(aircraft_response)
+                                if bs_db.update_aircraft(aircraft_db):
+                                    global update_count
+                                    update_count += 1
+                                    logger.info('[ Update ] {:s}'.format(str(aircraft_db)))
+                            else:
+                                not_found.add(modeS)
 
-                    elif not aircraft_db:
+                        elif not aircraft_db:
 
-                        aircraft_response = query_modes(modeS)
-                        modeS_queried.add(modeS)
+                            aircraft_response = query_modes(modeS)
+                            modeS_queried.add(modeS)
 
-                        if aircraft_response:
-                            if bs_db.insert_aircraft(aircraft_response):
-                                global insert_count
-                                insert_count += 1
-                                logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
+                            if aircraft_response:
+                                if bs_db.insert_aircraft(aircraft_response):
+                                    global insert_count
+                                    insert_count += 1
+                                    logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
+                    except:
+                        logger.exception("An error occured")
 
         time.sleep(20)
 

@@ -53,7 +53,7 @@ class BaseStationDB:
                 sql = "INSERT INTO Aircraft (ModeS,FirstCreated,LastModified,Registration,ICAOTypeCode,Type,RegisteredOwners) VALUES('%s','%s','%s','%s','%s','%s','%s');" % (acrft.modes_hex,timestamp,timestamp,acrft.reg, acrft.type1, acrft.type2, acrft.operator)
                 self.cur.execute(sql)
                 return True
-            except sqlite3.OperationalError as oe:
+            except (sqlite3.OperationalError, sqlite3.IntegrityError) as oe:
                 logger.exception(oe)
                 logger.error('Could not insert aircraft: {:s}'.format(str(acrft)))
         
