@@ -39,16 +39,16 @@ class DBRepository:
         for flight in Flight.select(Flight.id).where(Flight.archived == is_archived):
             
             pos = (Position.select()
-                                .where(Position.flight_fk == flight.id )
-                                .order_by(Position.flight_fk, Position.timestmp.asc()) )
+                    .where(Position.flight_fk == flight.id )
+                    .order_by(Position.flight_fk, Position.timestmp.asc()) )
 
-            flight_data.append(pos)
+            flight_data.extend(pos)
 
         return flight_data
 
     @staticmethod
     def get_positions(flight_id):
-        return (Position.select()
+        return list(Position.select()
                         .where(Position.flight_fk == flight_id)
                         .order_by(Position.flight_fk, Position.timestmp.asc()))
 

@@ -43,7 +43,7 @@ pos_db = None
 def index():
 
     if get_config().delete_after > 0:
-        threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+        #threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
 
         result_set = (Flight.select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
@@ -51,7 +51,7 @@ def index():
         # result_set = (Position
         #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
         #     .where(Position.timestmp > threshold_data)
-        #     .group_by(Position.icao)
+        #     .group_by(Position.icao
         #     .order_by(fn.MAX(Position.timestmp).desc()))
 
     else:
@@ -69,13 +69,11 @@ def index():
 @app.route("/archived") 
 def archived():
 
-    result_set = (Position
-        .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
-        .where(Position.archived == True)
-        .group_by(Position.icao)
-        .order_by(fn.MAX(Position.timestmp).desc()))
+    result_set = (Flight
+        .select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        .where(Flight.archived == True) )
 
-    return render_entries(result_set,True)
+    return render_entries(result_set, True)
 
 
 def render_entries(entries, archived = False):
@@ -108,7 +106,7 @@ def get_positions(modeS_addr):
     if len(flights) > 0:
 
         positions = DBRepository.get_positions(flights[0])
-        pos_entries =[list(map(lambda p: [p.lat, p.lon, p.alt], positions))]
+        pos_entries = [ [p.lat, p.lon, p.alt] for p in positions]
  
         return Response(json.dumps(pos_entries), mimetype='application/json')
     else:
@@ -118,9 +116,8 @@ def get_positions(modeS_addr):
 def get_all_positions():
 
     archived = get_boolean_arg('archived')
-
     positions = DBRepository.get_all_positions(archived)
-    entries = list(map(lambda fl: list(map(lambda p : [p.lat, p.lon, p.alt], fl )), positions))    
+    entries = [ [p.lat, p.lon, p.alt] for p in positions]
 
     return Response(json.dumps(entries), mimetype='application/json')
 
