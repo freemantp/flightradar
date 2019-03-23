@@ -106,7 +106,7 @@ def get_positions(modeS_addr):
     if len(flights) > 0:
 
         positions = DBRepository.get_positions(flights[0])
-        pos_entries = [ [p.lat, p.lon, p.alt] for p in positions]
+        pos_entries = [[ [p.lat, p.lon, p.alt] for p in positions]]
  
         return Response(json.dumps(pos_entries), mimetype='application/json')
     else:
@@ -117,7 +117,7 @@ def get_all_positions():
 
     archived = get_boolean_arg('archived')
     positions = DBRepository.get_all_positions(archived)
-    entries = [ [p.lat, p.lon, p.alt] for p in positions]
+    entries = [[[p.lat, p.lon, p.alt] for p in l] for l in positions] 
 
     return Response(json.dumps(entries), mimetype='application/json')
 

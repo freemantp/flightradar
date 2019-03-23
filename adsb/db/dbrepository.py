@@ -42,7 +42,7 @@ class DBRepository:
                     .where(Position.flight_fk == flight.id )
                     .order_by(Position.flight_fk, Position.timestmp.asc()) )
 
-            flight_data.extend(pos)
+            flight_data.append(list(pos))
 
         return flight_data
 
