@@ -4,7 +4,7 @@
 <head>
   <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
   <meta charset="utf-8">
-  <title>{{icao24}}</title>
+  <title>{{flight_id}}</title>
   <style>
     /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
@@ -342,7 +342,7 @@
         path: google.maps.SymbolPath.CIRCLE
       };
 
-      var icao = "{{icao24}}";
+      var flightId = "{{flight_id}}";
       var archived_only = "{{archived}}" == "True";
 
       function create_path(data) {
@@ -373,7 +373,7 @@
         var myLatLng = { lat: Number(pos[0]), lng: Number(pos[1]) };
         var marker = new google.maps.Marker({
           position: myLatLng,
-          title: icao
+          title: flightId
         });
 
         marker.setMap(map);
@@ -404,9 +404,9 @@
         });
       }
 
-      if (icao.length > 0) {
-        update_flightpaths("../pos/" + icao);
-        var refresh = setInterval(function () { update_flightpaths("../pos/" + icao) }, 1000);
+      if (flightId.length > 0) {
+        update_flightpaths("../pos/" + flightId);
+        var refresh = setInterval(function () { update_flightpaths("../pos/" + flightId) }, 1000);
       } else {
         update_flightpaths("../positions");
         var pos_path = archived_only ? "../positions?archived=true" : "../positions";

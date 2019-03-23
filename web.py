@@ -45,7 +45,7 @@ def index():
     if get_config().delete_after > 0:
         #threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
 
-        result_set = (Flight.select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
         
         # result_set = (Position
@@ -56,7 +56,7 @@ def index():
 
     else:
 
-        result_set = (Flight.select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
 
         # result_set = (Position
@@ -64,30 +64,30 @@ def index():
         #     .group_by(Position.icao)
         #     .order_by(fn.MAX(Position.timestmp).desc()))
 
-    return render_entries(result_set)
+    return render_flights(result_set)
 
 @app.route("/archived") 
 def archived():
 
     result_set = (Flight
-        .select(Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        .select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
         .where(Flight.archived == True) )
 
-    return render_entries(result_set, True)
+    return render_flights(result_set, True)
 
 
-def render_entries(entries, archived = False):
+def render_flights(flights, archived = False):
 
     response = []
 
-    for entry in entries:
+    for flight in flights:
 
         bs_db = get_basestation_db()
-        aircraft = bs_db.query_aircraft(entry.modeS)
+        aircraft = bs_db.query_aircraft(flight.modeS)
         
         if not aircraft:
-            aircraft = Aircraft(entry.modeS)
-        response.append((aircraft.__dict__, entry.last_contact, entry.archived, entry.callsign))
+            aircraft = Aircraft(flight.modeS)
+        response.append((aircraft.__dict__, flight.last_contact, flight.archived, flight.callsign, flight.id))
             
     metaInfo = {
         'updaterAlive' : updater.isAlive(),
@@ -98,14 +98,12 @@ def render_entries(entries, archived = False):
 
     return render_template('aircraft.html', airplanes=response, status=metaInfo, silhouette=updater.get_silhouete_params())
 
-@app.route("/pos/<modeS_addr>") 
-def get_positions(modeS_addr):
+@app.route("/pos/<flight_id>") 
+def get_positions(flight_id):
 
-    flights = DBRepository.get_flights(modeS_addr)
+    if flight_id:
 
-    if len(flights) > 0:
-
-        positions = DBRepository.get_positions(flights[0])
+        positions = DBRepository.get_positions(flight_id)
         pos_entries = [[ [p.lat, p.lon, p.alt] for p in positions]]
  
         return Response(json.dumps(pos_entries), mimetype='application/json')
@@ -121,9 +119,9 @@ def get_all_positions():
 
     return Response(json.dumps(entries), mimetype='application/json')
 
-@app.route("/map/<icao24>") 
-def get_map(icao24):
-    return render_template('map.html', icao24=icao24)
+@app.route("/map/<flight_id>") 
+def get_map(flight_id):
+    return render_template('map.html', flight_id=flight_id)
 
 @app.route("/map") 
 def get_map_all():

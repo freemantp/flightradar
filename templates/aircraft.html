@@ -47,7 +47,7 @@
                     <td>{{ ap[0]['operator'] }}</td>
                     <td>{{ ap[1] | localdate('%d.%m.%Y %H:%M')}}</td>
                     <td>{%if ap[2]%}<i class="fa fa-archive" title="archived"></i>{% endif %}</td>
-                    <td><a href="map/{{ap[0]['modes_hex']}}" alt="Show flight path"><i class="fa fa-map-marker"></i></a></td>
+                    <td><a href="map/{{ap[4]}}" alt="Show flight path"><i class="fa fa-map-marker"></i></a></td>
                 </tr>
                 {% endfor %}
         </tbody>  
