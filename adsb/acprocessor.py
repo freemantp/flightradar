@@ -62,18 +62,17 @@ class AircaftProcessor(object):
                 self.update_flights(filtered_pos)
 
                 # Filter empty positons
-                non_empty_pos = [p for p in positions if p[1] and p[2]]
+                non_empty_pos = [p for p in filtered_pos if p[1] and p[2]]
                 pos_array = list(non_empty_pos)
 
                 # Create tuples suitable for DB insertion
-                db_entries = [(self.modeS_flight_map[m[0]], m[1], m[2], m[3]) for m in  pos_array]
-    
+                db_entries = [(self.modeS_flight_map[m[0]], m[1], m[2], m[3]) for m in pos_array]
+
                 if db_entries:
                     fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
                     for i in range(0, len(db_entries), self._insert_batch_size):
                         Position.insert_many(db_entries[i:i+self._insert_batch_size], fields=fields).execute()
 
-                
             self.cleanup_items()
 
         except ResultTimeout:
