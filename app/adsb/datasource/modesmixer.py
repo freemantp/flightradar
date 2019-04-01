@@ -1,4 +1,4 @@
-from adsb.datasource.radarservice import RadarService
+from .radarservice import RadarService
 import json
 import logging
 

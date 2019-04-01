@@ -3,20 +3,24 @@ from time import sleep
 import datetime
 import logging
 
-from adsb.datasource.modesmixer import ModeSMixer
-from adsb.datasource.virtualradarserver import VirtualRadarServer
-from adsb.util.modes_util import ModesUtil
-from adsb.db.dbmodels import Position, Flight
-from adsb.db.dbrepository import DBRepository
+from ..util.singleton import Singleton
+
+from .datasource.modesmixer import ModeSMixer
+from .datasource.virtualradarserver import VirtualRadarServer
+from .util.modes_util import ModesUtil
+from .db.dbmodels import Position, Flight
+from .db.dbrepository import DBRepository
+
 
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
 
 logger = logging.getLogger(__name__)
 
-class AircaftProcessor(object):
+@Singleton
+class FlightUpdater(object):
 
-    def __init__(self, config, db):
+    def initialize(self, config, db):
 
         self.sleep_time = 1
         self._t = None

@@ -1,4 +1,5 @@
 import json
+import os
 
 class Config():
 
@@ -10,6 +11,14 @@ class Config():
         self.military_only = True
         self.type = 'mm2'
         self.delete_after = 1440
+
+    def from_env(self):
+          self.data_folder = os.environ.get('DATA_FOLDER')
+          self.service_url = os.environ.get('SERVICE_URL')
+          self.type = os.environ.get('SERVICE_TYPE')
+          self.military_only = os.environ.get('MIL_ONLY')
+          self.delete_after = os.environ.get('DB_RETENTION_MIN')
+
 
     def from_file(self, filename):
         with open(filename, 'r') as json_file:
@@ -32,6 +41,11 @@ class Config():
             if 'militaryOnly' in config:
                 self.military_only = config['militaryOnly']
 
-            if 'deleteAfterMinutes' in config:
-                self.delete_after = config['deleteAfterMinutes']
+            if 'dbRetentionMinutes' in config:
+                self.delete_after = config['dbRetentionMinutes']
     
+class DevConfig(Config):
+    DEBUG = True
+
+class ProductionConfig(Config):
+    pass

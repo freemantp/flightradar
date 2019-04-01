@@ -10,59 +10,38 @@ from dateutil import tz
 from flask import Flask, Response, g, jsonify, render_template, request
 from peewee import fn
 
+from . import create_app
 
-from adsb.acprocessor import AircaftProcessor
+from adsb.flightupdater import FlightUpdater
 from adsb.aircraft import Aircraft
 from adsb.config import Config
 from adsb.db.basestationdb import BaseStationDB
 from adsb.db.dbmodels import init_db_schema, Position, Flight
 from adsb.db.dbrepository import DBRepository
 
-logging.basicConfig(level=logging.INFO)
-
-def get_config():
-    conf = getattr(g, '_config', None)
-    if conf is None:
-        conf = Config()
-        conf.from_file('config.json')
-        g._config = conf
-    return conf
-
 def get_basestation_db():
     basestation_db = getattr(g, '_basestation_db', None)
     if basestation_db is None:
-        config = get_config()
-        basestation_db = g._basestation_db = BaseStationDB(config.data_folder + "BaseStation.sqb")
+        basestation_db = g._basestation_db = BaseStationDB(app.config['data_folder'] + "BaseStation.sqb")
     return basestation_db
 
-app = Flask(__name__)
+conf = Config()
+conf.from_file('config.json')
+
+app = create_app(conf)
 
 pos_db = None
 
 @app.route("/") 
 def index():
 
-    if get_config().delete_after > 0:
-        #threshold_data = datetime.datetime.utcnow() - datetime.timedelta(minutes=get_config().delete_after)
+    if app.config['delete_after'] > 0:
 
         result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
-        
-        # result_set = (Position
-        #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
-        #     .where(Position.timestmp > threshold_data)
-        #     .group_by(Position.icao
-        #     .order_by(fn.MAX(Position.timestmp).desc()))
-
     else:
-
         result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
-
-        # result_set = (Position
-        #     .select(Position.icao, Position.archived, fn.MAX(Position.timestmp).alias('timestmp') )
-        #     .group_by(Position.icao)
-        #     .order_by(fn.MAX(Position.timestmp).desc()))
 
     return render_flights(result_set)
 
@@ -82,8 +61,8 @@ def render_flights(flights, archived = False):
 
     for flight in flights:
 
-        bs_db = get_basestation_db()
-        aircraft = bs_db.query_aircraft(flight.modeS)
+
+        aircraft = g._basestation_db.query_aircraft(flight.modeS)
         
         if not aircraft:
             aircraft = Aircraft(flight.modeS)
@@ -92,7 +71,7 @@ def render_flights(flights, archived = False):
     metaInfo = {
         'updaterAlive' : updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
-        'mode' : 'ModeSmixer2' if get_config().type == 'mm2' else 'VirtualRadar',
+        'mode' : 'ModeSmixer2' if app.config['type'] == 'mm2' else 'VirtualRadar',
         'archived' : archived
     }    
 
@@ -150,7 +129,8 @@ def datetimefilter(value, format="%d.%m.%Y %H:%M"):
 
 @atexit.register
 def _stop_worker_threads():
-    pos_db.stop()    
+    pos_db.stop()
+    updater.stop()
 
 def get_boolean_arg(argname):
     arch_arg = request.args.get(argname)
@@ -159,16 +139,21 @@ def get_boolean_arg(argname):
     else:
         return False
 
+def get_config():
+    conf = getattr(g, '_config', None)
+    if conf is None:
+
+        g._config = conf
+    return conf
+
 if __name__ == '__main__':
 
-    conf = None
-    with app.app_context():
-         conf = get_config()
+    conf = Config()
+    conf.from_file('config.json')
+
     pos_db = init_db_schema(conf.data_folder)
 
-    updater = AircaftProcessor(conf, pos_db)
+    updater = FlightUpdater(conf, pos_db)
     updater.start()
 
     app.run(host='0.0.0.0', debug=False)
-
-    updater.stop()
