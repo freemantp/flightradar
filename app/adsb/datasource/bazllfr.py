@@ -102,12 +102,9 @@ class BazlLFR:
                 res.read()
                 raise ValueError(
                     'Unexpected http code {:s}'.format(res.status))
-        except RemoteDisconnected:
-            logger.exception("RemoteDisconnected")
-        except IncompleteRead:
-            logger.exception("IncompleteRead")
-        except SocketError :
-            logger.exception("SocketError")
-
+        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
+            logger.exception(ex)
+        except:
+            logger.exception('An unexpected error occured')    
 
         return None

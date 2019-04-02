@@ -12,7 +12,6 @@ from ..util.modes_util import ModesUtil
 
 logger = logging.getLogger('ADSB-NL')
 
-
 class AdsbNL:
 
     """ ads-b.nl Queries """
@@ -92,11 +91,9 @@ class AdsbNL:
                 res.read()
                 raise ValueError('Unexpected http code: %s' % res.status)
 
-        except RemoteDisconnected:
-            logger.error("RemoteDisconnected")
-        except IncompleteRead:
-            logger.error("IncompleteRead")
-        except BrokenPipeError:
-            logger.error("BrokenPipeError")            
+        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
+            logger.exception(ex)
+        except:
+            logger.exception('An unexpected error occured')    
 
         return None
