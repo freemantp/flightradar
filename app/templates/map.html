@@ -405,8 +405,8 @@
       }
 
       if (flightId.length > 0) {
-        update_flightpaths("../pos/" + flightId);
-        var refresh = setInterval(function () { update_flightpaths("../pos/" + flightId) }, 1000);
+        update_flightpaths("../api/v1/pos/" + flightId);
+        var refresh = setInterval(function () { update_flightpaths("../api/v1/pos/" + flightId) }, 1000);
       } else {
         update_flightpaths("../positions");
         var pos_path = archived_only ? "../positions?archived=true" : "../positions";

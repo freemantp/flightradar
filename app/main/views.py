@@ -25,6 +25,10 @@ def index():
 
     return render_flights(result_set)
 
+@main.route("/map/<flight_id>") 
+def get_map(flight_id):
+    return render_template('map.html', flight_id=flight_id)
+
 def render_flights(flights, archived = False):
 
     response = []

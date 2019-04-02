@@ -24,7 +24,6 @@ def create_updater(config: Config, flight_db):
     updater.initialize(config, flight_db)
     return updater
 
-
 def create_app(config: Config):
     app = Flask(__name__)
     #app.config.from_json()
