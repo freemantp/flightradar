@@ -47,7 +47,9 @@ class AircaftProcessor(object):
 
             for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
                 DBRepository.delete_flight_and_positions(flight.id)
-                #logger.info('Deleted flight {:s} (id={:d})'.format(str(flight.callsign), flight.id))
+                logger.debug('Deleted flight {:s} (id={:d})'.format(str(flight.callsign), flight.id))
+
+            # TODO: Cleanup modeS_flight_map as well!
 
     def _run(self):
 
@@ -58,20 +60,12 @@ class AircaftProcessor(object):
 
                 # Filter for military icaos
                 filtered_pos = [pos for pos in positions if self._mil_ranges.is_military(pos[0])] if self._mil_only else positions
-
+                
+                # Update flights
                 self.update_flights(filtered_pos)
 
-                # Filter empty positons
-                non_empty_pos = [p for p in filtered_pos if p[1] and p[2]]
-                pos_array = list(non_empty_pos)
-
-                # Create tuples suitable for DB insertion
-                db_entries = [(self.modeS_flight_map[m[0]], m[1], m[2], m[3]) for m in pos_array]
-
-                if db_entries:
-                    fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
-                    for i in range(0, len(db_entries), self._insert_batch_size):
-                        Position.insert_many(db_entries[i:i+self._insert_batch_size], fields=fields).execute()
+                # Add non-empty positions
+                self.add_positions([p for p in filtered_pos if p[1] and p[2]])
 
             self.cleanup_items()
 
@@ -83,7 +77,22 @@ class AircaftProcessor(object):
         self._t = Timer(self.sleep_time, self._run)
         self._t.start()
 
+    def add_positions(self, position_array):
+
+        """ Inserts positions into the database"""
+
+        # Create tuples suitable for DB insertion
+        db_entries = [(self.modeS_flight_map[m[0]], m[1], m[2], m[3]) for m in position_array]
+
+        # Insert new
+        if db_entries:
+            fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
+            for i in range(0, len(db_entries), self._insert_batch_size):
+                Position.insert_many(db_entries[i:i+self._insert_batch_size], fields=fields).execute()
+        
     def update_flights(self, flights):
+
+        """ Updates flights in the database"""
 
         # None for a callsign is allowed
         active_flights = [ (f[0], f[4]) for f in flights] # (modeS, callsign)
@@ -98,9 +107,13 @@ class AircaftProcessor(object):
                 flight_results = (Flight.select(Flight.id)
                         .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
    
-                if flight_results and modeS_callsgn[1]:
+                if flight_results and modeS_callsgn[1]:                    
                     Flight.update(callsign = modeS_callsgn[1]).where(Flight.id == flight_results[0].id).execute()
                     logger.info('updated {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None" ,modeS_callsgn[0]))
+                else:
+                    #TODO: Insert a new Flight!
+                    pass
+            
             else:
 
                 flight_results = (Flight.select(Flight.id)

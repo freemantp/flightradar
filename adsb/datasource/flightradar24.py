@@ -85,6 +85,8 @@ class Flightradar24:
                 failcounter += 1
                 time.sleep(failcounter)
                 logger.error("CannotSendRequest, waiting some time")
+            except:
+                logger.exception('An unexpected error occured')
 
         # if failcounter == self.maxretires:
         #     logger.warning("Too many failures for %s, giving up" % mode_s_hex)
