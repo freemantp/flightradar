@@ -64,12 +64,13 @@ class AdsbNL:
                 values = []
 
                 index = 0
-                for sib in soup.body.find('h1', text='Aircraft info').next_siblings:
+                for sib in soup.body.find('div', text='Registration: ').parent:
                     if sib.name == 'div':
+                        
                         (keys if (index % 2 == 0) else values).append(sib.string.strip())
                         index = index + 1
 
-                if len(keys) == len(values) and len(keys) == 6:
+                if len(keys) == len(values) and len(keys) == 7:
 
                     modeS_tuple = AdsbNL.split_parenthesis(values[3])
                     if modeS_tuple:

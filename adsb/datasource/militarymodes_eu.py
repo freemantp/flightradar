@@ -34,7 +34,6 @@ class MilitaryModeS:
         return 'Live Military Mode S'
 
     def accept(self, modes_address):
-        print("fd")
         return self.modes_util.is_military(modes_address)
 
     def query_aircraft(self, mode_s_hex):
@@ -62,12 +61,10 @@ class MilitaryModeS:
                         aircraft.type2 = td.text
                     elif index == 4:
                         aircraft.operator = td.text
-                    else:
-                        print('{0}: {1}'.format(index, td.text))
 
                     index = index + 1
 
-                print(aircraft)
+                return aircraft
 
             elif res.status == 404:                    
                 return None
