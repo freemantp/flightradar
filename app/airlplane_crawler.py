@@ -1,13 +1,13 @@
-from adsb.datasource.flightradar24 import Flightradar24
-from adsb.datasource.bazllfr import BazlLFR
-from adsb.datasource.adsb_nl import AdsbNL
-from adsb.datasource.openskynet import OpenskyNet
-from adsb.datasource.militarymodes_eu import MilitaryModeS
-from adsb.datasource.modesmixer import ModeSMixer
-from adsb.datasource.virtualradarserver import VirtualRadarServer
-from adsb.db.basestationdb import BaseStationDB
-from adsb.util.tabular import Tabular
-from adsb.config import Config
+from .adsb.datasource.flightradar24 import Flightradar24
+from .adsb.datasource.bazllfr import BazlLFR
+from .adsb.datasource.adsb_nl import AdsbNL
+from .adsb.datasource.openskynet import OpenskyNet
+from .adsb.datasource.militarymodes_eu import MilitaryModeS
+from .adsb.datasource.modesmixer import ModeSMixer
+from .adsb.datasource.virtualradarserver import VirtualRadarServer
+from .adsb.db.basestationdb import BaseStationDB
+from .adsb.util.tabular import Tabular
+from .adsb.config import Config
 
 import time
 import signal

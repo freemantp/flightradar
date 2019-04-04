@@ -2,11 +2,12 @@ import json
 
 from . import api
 from .. import get_basestation_db
-from ..adsb.db.dbrepository import DBRepository
+from .. util.flask_util import get_boolean_arg
+from .. adsb.db.dbrepository import DBRepository
 
-from flask import current_app as app, Response
+from flask import current_app as app, Response,request
 
-@api.route("/pos/<flight_id>") 
+@api.route("/flight/<flight_id>/positions") 
 def get_positions(flight_id):
 
     if flight_id:
@@ -27,18 +28,27 @@ def get_positions(flight_id):
     
     return 'Not found', 404
 
-@api.route('/test')
-def test_route():
 
-    print(app.config['data_folder'])
+@api.route("/positions") 
+def get_all_positions():
 
-    return "test"   
+    archived = get_boolean_arg('archived')
+    positions = DBRepository.get_all_positions(archived)
+    entries = [[[p.lat, p.lon, p.alt] for p in l] for l in positions] 
 
-@api.route('/base')
-def test_route2():
+    return Response(json.dumps(entries), mimetype='application/json')
 
-    baseSt = get_basestation_db()
 
-    print(baseSt)
+#@api.before_request
+#def before_request():
+#    if pos_db.is_closed():
+#        pos_db.connect()
 
-    return "go"   
+@api.after_request
+def after_request(response):
+    #pos_db.close()
+
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
+    return response    

@@ -404,12 +404,15 @@
         });
       }
 
+      var basepath = '../api/v1';
+
       if (flightId.length > 0) {
-        update_flightpaths("../api/v1/pos/" + flightId);
-        var refresh = setInterval(function () { update_flightpaths("../api/v1/pos/" + flightId) }, 1000);
-      } else {
-        update_flightpaths("../positions");
-        var pos_path = archived_only ? "../positions?archived=true" : "../positions";
+        var posPath = basepath + '/flight/' +  flightId + '/positions';
+        update_flightpaths(posPath);
+        var refresh = setInterval(function () { update_flightpaths(posPath) }, 1000);
+      } else {        
+        var pos_path = archived_only ? basepath + '/positions?archived=true' : basepath + '/positions';
+        update_flightpaths(pos_path);
         var refresh = setInterval(function () { update_flightpaths(pos_path) }, 1000);
       }
 

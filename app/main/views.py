@@ -5,6 +5,7 @@ from .. import get_basestation_db
 from .. adsb.aircraft import Aircraft
 from .. adsb.db.dbmodels import Flight
 from .. adsb.flightupdater import FlightUpdater
+from .. util.flask_util import get_boolean_arg
 
 from .. import get_basestation_db
 
@@ -29,6 +30,20 @@ def index():
 def get_map(flight_id):
     return render_template('map.html', flight_id=flight_id)
 
+@main.route("/map") 
+def get_map_all():
+    archived = get_boolean_arg('archived')
+    return render_template('map.html', archived=archived)
+
+@main.route("/archived") 
+def archived():
+
+    result_set = (Flight
+        .select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        .where(Flight.archived == True) )
+
+    return render_flights(result_set, True)
+
 def render_flights(flights, archived = False):
 
     response = []
@@ -51,7 +66,10 @@ def render_flights(flights, archived = False):
     }    
 
     return render_template('aircraft.html', airplanes=response, status=metaInfo, silhouette=updater.get_silhouete_params())
-    
+
+
+
+
 @main.app_template_filter()
 def localdate(value, format="%d.%m.%Y %H:%M"):    
     utctime = timezone('UTC').localize(value)
