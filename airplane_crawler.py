@@ -1,14 +1,14 @@
-from .adsb.datasource.flightradar24 import Flightradar24
-from .adsb.datasource.bazllfr import BazlLFR
-from .adsb.datasource.adsb_nl import AdsbNL
-from .adsb.datasource.openskynet import OpenskyNet
-from .adsb.datasource.militarymodes_eu import MilitaryModeS
-from .adsb.datasource.secret_base import SecretBasesUk
-from .adsb.datasource.modesmixer import ModeSMixer
-from .adsb.datasource.virtualradarserver import VirtualRadarServer
-from .adsb.db.basestationdb import BaseStationDB
-from .adsb.util.tabular import Tabular
-from .adsb.config import Config
+from app.adsb.datasource.flightradar24 import Flightradar24
+from app.adsb.datasource.bazllfr import BazlLFR
+from app.adsb.datasource.adsb_nl import AdsbNL
+from app.adsb.datasource.openskynet import OpenskyNet
+from app.adsb.datasource.militarymodes_eu import MilitaryModeS
+from app.adsb.datasource.secret_base import SecretBasesUk
+from app.adsb.datasource.modesmixer import ModeSMixer
+from app.adsb.datasource.virtualradarserver import VirtualRadarServer
+from app.adsb.db.basestationdb import BaseStationDB
+from app.adsb.util.tabular import Tabular
+from app.config import Config
 
 import time
 import signal
@@ -23,14 +23,14 @@ logger =  logging.getLogger("Updater")
 adsb_config = Config()
 adsb_config.from_file('config.json')
 
-bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
+bs_db = BaseStationDB(adsb_config.DATA_FOLDER + "BaseStation.sqb")
 
 sources = [BazlLFR(), 
 OpenskyNet(), 
-AdsbNL(adsb_config.data_folder),
-SecretBasesUk(adsb_config.data_folder),
+AdsbNL(adsb_config.DATA_FOLDER),
+SecretBasesUk(adsb_config.DATA_FOLDER),
 Flightradar24(),
-MilitaryModeS(adsb_config.data_folder)]
+MilitaryModeS(adsb_config.DATA_FOLDER)]
 
 modeS_queried = set()
 not_found = set()
@@ -65,10 +65,10 @@ def query_modes(modeS_address):
 
 def update_live():
 
-    if adsb_config.type == 'mm2':
-        msm = ModeSMixer(adsb_config.service_url)
+    if adsb_config.RADAR_SERVICE_TYPE == 'mm2':
+        msm = ModeSMixer(adsb_config.RADAR_SERVICE_URL)
     else:
-         raise ValueError('Service type {:s} is not supported'.format(adsb_config.type)) #TODO enable VRS
+         raise ValueError('Service type {:s} is not supported'.format(adsb_config.RADAR_SERVICE_TYPE)) #TODO enable VRS
 
     while True:
         live_aircraft = msm.query_live_icao24()
@@ -110,7 +110,7 @@ def update_live():
         time.sleep(20)
 
 def read_csv(file):
-    for plane in Tabular.parse_csv(adsb_config.data_folder + file):
+    for plane in Tabular.parse_csv(adsb_config.DATA_FOLDER + file):
         aircraft = bs_db.query_aircraft(plane.modes_hex)
         if aircraft:
             if not aircraft.is_complete() and not aircraft.is_empty():
