@@ -56,11 +56,11 @@ class MilitaryModeS:
                 for td in soup.table.find_all('td', width='40%'):
 
                     if index == 0:
-                        aircraft.reg = td.text
+                        aircraft.reg = td.text if td.text else None
                     elif index == 2:
-                        aircraft.type2 = td.text
+                        aircraft.type2 = td.text if td.text else None
                     elif index == 4:
-                        aircraft.operator = td.text
+                        aircraft.operator = td.text if td.text else None
 
                     index = index + 1
 

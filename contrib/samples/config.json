@@ -1,0 +1,7 @@
+{
+    "serviceUrl" : "http://my.radarserver.com/VirtualRadar/",
+    "type" : "vrs",
+    "dataFolder" : "D:\\path\\to\\resources\\",
+    "militaryOnly" : false,
+    "dbRetentionMinutes" :  1
+}

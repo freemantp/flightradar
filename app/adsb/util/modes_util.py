@@ -2,7 +2,7 @@ import time
 import datetime
 import csv
 
-from ..config import Config
+from ...config import Config
 
 from ..db.basestationdb import BaseStationDB
 from ..datasource.modesmixer import ModeSMixer

@@ -6,9 +6,9 @@ from functools import reduce
 from flask import Flask
 from peewee import *
 
-from adsb.config import Config
-from adsb.db.dbmodels import Position, Flight, database_proxy, DB_MODEL_CLASSES
-from adsb.db.dbrepository import DBRepository
+from app.adsb.config import Config
+from app.adsb.db.dbmodels import Position, Flight, database_proxy, DB_MODEL_CLASSES
+from app.adsb.db.dbrepository import DBRepository
 
 adsb_config = Config()
 adsb_config.from_file('config.json')

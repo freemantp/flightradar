@@ -10,7 +10,7 @@ from .datasource.virtualradarserver import VirtualRadarServer
 from .util.modes_util import ModesUtil
 from .db.dbmodels import Position, Flight
 from .db.dbrepository import DBRepository
-
+from ..config import Config
 
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
@@ -20,23 +20,22 @@ logger = logging.getLogger(__name__)
 @Singleton
 class FlightUpdater(object):
 
-    def initialize(self, config, db):
+    def initialize(self, config: Config):
 
         self.sleep_time = 1
         self._t = None
 
-        if config.type == 'mm2':
-            self._service = ModeSMixer(config.service_url)
-        elif config.type == 'vrs':
-            self._service = VirtualRadarServer(config.service_url)
+        if config.RADAR_SERVICE_TYPE == 'mm2':
+            self._service = ModeSMixer(config.RADAR_SERVICE_URL)
+        elif config.RADAR_SERVICE_TYPE == 'vrs':
+            self._service = VirtualRadarServer(config.RADAR_SERVICE_URL)
         else:
             raise ValueError('Service type not specified in config')
 
-        self._mil_ranges = ModesUtil(config.data_folder)
+        self._mil_ranges = ModesUtil(config.DATA_FOLDER)
         self.interrupted = False
-        self._mil_only = config.military_only
-        self._db = db
-        self.delete_after = config.delete_after
+        self._mil_only = config.MILTARY_ONLY
+        self.delete_after = config.DB_RETENTION_MIN
         self.modeS_flight_map = dict()
         # see https://stackoverflow.com/questions/35616602/peewee-operationalerror-too-many-sql-variables-on-upsert-of-only-150-rows-8-c#36788489
         self._insert_batch_size = 50

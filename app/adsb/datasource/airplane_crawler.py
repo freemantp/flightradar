@@ -3,6 +3,7 @@ from .adsb.datasource.bazllfr import BazlLFR
 from .adsb.datasource.adsb_nl import AdsbNL
 from .adsb.datasource.openskynet import OpenskyNet
 from .adsb.datasource.militarymodes_eu import MilitaryModeS
+from .adsb.datasource.secret_base import SecretBasesUk
 from .adsb.datasource.modesmixer import ModeSMixer
 from .adsb.datasource.virtualradarserver import VirtualRadarServer
 from .adsb.db.basestationdb import BaseStationDB
@@ -26,8 +27,9 @@ bs_db = BaseStationDB(adsb_config.data_folder + "BaseStation.sqb")
 
 sources = [BazlLFR(), 
 OpenskyNet(), 
-AdsbNL(adsb_config.data_folder), 
-Flightradar24(), 
+AdsbNL(adsb_config.data_folder),
+SecretBasesUk(adsb_config.data_folder),
+Flightradar24(),
 MilitaryModeS(adsb_config.data_folder)]
 
 modeS_queried = set()

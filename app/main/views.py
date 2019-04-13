@@ -16,7 +16,7 @@ from dateutil import tz
 @main.route('/')
 def index():
 
-    if app.config['delete_after'] > 0:
+    if app.config['DB_RETENTION_MIN'] > 0:
 
         result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()))
@@ -61,7 +61,7 @@ def render_flights(flights, archived = False):
     metaInfo = {
         'updaterAlive' : updater.isAlive(),
         'serviceAlive' : updater.is_service_alive(),
-        'mode' : 'ModeSmixer2' if app.config['type'] == 'mm2' else 'VirtualRadar',
+        'mode' : 'ModeSmixer2' if app.config['RADAR_SERVICE_TYPE'] == 'mm2' else 'VirtualRadar',
         'archived' : archived
     }    
 
