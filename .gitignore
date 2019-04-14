@@ -1,6 +1,6 @@
 venv/*
 *.pyc
-.vscode/
+.vscode/*
 resources/*.db
 resources/*.db-shm
 resources/*.db-wal
