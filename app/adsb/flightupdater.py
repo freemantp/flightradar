@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @Singleton
 class FlightUpdater(object):
 
-    def initialize(self, config: Config):
+    def initialize(self, config):
 
         self.sleep_time = 1
         self._t = None

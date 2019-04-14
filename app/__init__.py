@@ -19,7 +19,7 @@ def get_basestation_db():
         basestation_db = g._basestation_db = BaseStationDB(app.config['DATA_FOLDER'] + "BaseStation.sqb") #TODO: path join
     return basestation_db
 
-def create_updater(config: Config):    
+def create_updater(config):    
     updater = FlightUpdater.Instance()
     updater.initialize(config)
     return updater
