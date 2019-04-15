@@ -47,6 +47,8 @@ def init_db_schema(data_folder):
         results_timeout=5.0)  # Max. time to wait for query to be executed.
 
     database_proxy.initialize(position_db)
+
+    # TODO: Really do this on startup??
     position_db.create_tables(DB_MODEL_CLASSES) #init db
     position_db.execute_sql(TRIGGER_CREATE)
 
