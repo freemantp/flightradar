@@ -36,6 +36,19 @@ class MilitaryModeS:
     def accept(self, modes_address):
         return self.modes_util.is_military(modes_address)
 
+    def sanitize_known_issues(self, aircraft):
+
+        # Sanitize eurofighters
+        if not aircraft.type and aircraft.type2 == 'EF-2000':
+            aircraft.type = 'EUFI'
+            aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
+        
+        # Remove 3xxx like registrations
+        if len(aircraft.reg) == 4 and aircraft.reg[0].isdigit() and aircraft.reg.count('x'):
+            aircraft.reg = None
+
+        return
+
     def query_aircraft(self, mode_s_hex):
         """ queries aircraft data """
 
@@ -64,6 +77,7 @@ class MilitaryModeS:
 
                     index = index + 1
 
+                self.sanitize_known_issues(aircraft)
                 return aircraft
 
             elif res.status == 404:                    

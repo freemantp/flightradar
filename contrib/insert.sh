@@ -1,7 +1,11 @@
 #!/bin/bash
 
 todays_date=`date "+%Y-%m-%d"`
-dbfile=~/adsb-playground/resources/BaseStation.sqb
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+RESOURCES_DIR="$(dirname $SCRIPT_DIR)/resources"
+
+dbfile=$RESOURCES_DIR/BaseStation.sqb
 
 read -p "ModeS: " modes
 

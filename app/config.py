@@ -17,7 +17,6 @@ class Config():
         CONFIG_FILE_PATH = 'config.json'
 
         config_file = Path(CONFIG_FILE_PATH)
-        print(config_file.absolute())
         if config_file.is_file():
             self.from_file(CONFIG_FILE_PATH)
         
