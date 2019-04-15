@@ -8,6 +8,7 @@ import atexit
 conf = Config()
 
 app = create_app()
+print(conf)
 app.config.from_object(conf)
 
 # TODO: Really do this on startup??

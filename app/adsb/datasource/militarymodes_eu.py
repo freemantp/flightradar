@@ -38,16 +38,15 @@ class MilitaryModeS:
 
     def sanitize_known_issues(self, aircraft):
 
-        # Sanitize eurofighters
-        if not aircraft.type and aircraft.type2 == 'EF-2000':
-            aircraft.type = 'EUFI'
-            aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
-        
-        # Remove 3xxx like registrations
-        if len(aircraft.reg) == 4 and aircraft.reg[0].isdigit() and aircraft.reg.count('x'):
-            aircraft.reg = None
-
-        return
+        if aircraft:
+            # Sanitize eurofighters
+            if not aircraft.type1 and aircraft.type2 == 'EF-2000':
+                aircraft.type1= 'EUFI'
+                aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
+            
+            # Remove 3xxx like registrations
+            if len(aircraft.reg) == 4 and aircraft.reg[0].isdigit() and aircraft.reg.count('x'):
+                aircraft.reg = None
 
     def query_aircraft(self, mode_s_hex):
         """ queries aircraft data """
