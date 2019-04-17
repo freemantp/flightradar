@@ -43,10 +43,19 @@ class MilitaryModeS:
             if not aircraft.type1 and aircraft.type2 == 'EF-2000':
                 aircraft.type1= 'EUFI'
                 aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
+            # Prevent empty type codes
+            elif not aircraft.type1 or aircraft.type1 == 'None':
+                aircraft.type1 == None
             
-            # Remove 3xxx like registrations
-            if len(aircraft.reg) == 4 and aircraft.reg[0].isdigit() and aircraft.reg.count('x'):
+            # Remove xxxx like registrations
+            if (len(aircraft.reg) == 4 and ((aircraft.reg[0].isdigit() and aircraft.reg.count('x') == 3) or aircraft.reg.count('x') == 4)) \
+                or aircraft.reg == '-' or not aircraft.reg:
                 aircraft.reg = None
+
+            # Remove empty operators
+            if not aircraft.operator or aircraft.operator == '-':
+                aircraft.operator = None
+
 
     def query_aircraft(self, mode_s_hex):
         """ queries aircraft data """
