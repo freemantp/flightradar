@@ -48,7 +48,7 @@ class MilitaryModeS:
                 aircraft.type1 == None
             
             # Remove xxxx like registrations
-            if (len(aircraft.reg) == 4 and ((aircraft.reg[0].isdigit() and aircraft.reg.count('x') == 3) or aircraft.reg.count('x') == 4)) \
+            if (aircraft.reg and len(aircraft.reg) == 4 and ((aircraft.reg[0].isdigit() and aircraft.reg.count('x') == 3) or aircraft.reg.count('x') == 4)) \
                 or aircraft.reg == '-' or not aircraft.reg:
                 aircraft.reg = None
 
