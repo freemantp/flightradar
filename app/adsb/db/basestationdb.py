@@ -50,8 +50,8 @@ class BaseStationDB:
         if acrft:
             try:
                 timestamp = datetime.datetime.now().isoformat()
-                sql = "INSERT INTO Aircraft (ModeS,FirstCreated,LastModified,Registration,ICAOTypeCode,Type,RegisteredOwners) VALUES('%s','%s','%s','%s','%s','%s','%s');" % (acrft.modes_hex,timestamp,timestamp,acrft.reg, acrft.type1, acrft.type2, acrft.operator)
-                self.cur.execute(sql)
+                sql = "INSERT INTO Aircraft (ModeS,FirstCreated,LastModified,Registration,ICAOTypeCode,Type,RegisteredOwners) VALUES(?,?,?,?,?,?,?);" 
+                self.cur.execute(sql, (acrft.modes_hex, timestamp,timestamp,acrft.reg, acrft.type1, acrft.type2, acrft.operator))
                 return True
             except (sqlite3.OperationalError, sqlite3.IntegrityError) as oe:
                 logger.exception(oe)
