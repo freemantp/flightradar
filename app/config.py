@@ -19,7 +19,7 @@ class Config():
         config_file = Path(CONFIG_FILE_PATH)
         if config_file.is_file():
             self.from_file(CONFIG_FILE_PATH)
-        
+
         self.from_env()
 
     def str2bool(v):
@@ -54,6 +54,7 @@ class Config():
         with open(filename, 'r') as json_file:
             config = json.load(json_file)
 
+
             if 'dataFolder' in config:
                 self.DATA_FOLDER = config['dataFolder']
             else:
@@ -70,8 +71,8 @@ class Config():
             if 'militaryOnly' in config:
                 self.MILTARY_ONLY = config['militaryOnly']
 
-            if 'dbRetentionMinutes' in config:
-                self.DB_RETENTION_MIN = config['dbRetentionMinutes']
+            if 'deleteAfterMinutes' in config:
+                self.DB_RETENTION_MIN = config['deleteAfterMinutes']
 
     def __str__(self):
         return 'DATA_FOLDER: {0}, RADAR_SERVICE_URL: {1}, type: {2}, mil_only: {3}, delete_after: {4}'.format(self.DATA_FOLDER, self.RADAR_SERVICE_URL, self.RADAR_SERVICE_TYPE, self.MILTARY_ONLY, self.DB_RETENTION_MIN) 

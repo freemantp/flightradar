@@ -39,21 +39,27 @@ class MilitaryModeS:
     def sanitize_known_issues(self, aircraft):
 
         if aircraft:
-            # Sanitize eurofighters
-            if not aircraft.type1 and aircraft.type2 == 'EF-2000':
-                aircraft.type1= 'EUFI'
-                aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
+
+            if not aircraft.type1:
+                # Sanitize eurofighters
+                if  aircraft.type2 == 'EF-2000':
+                    aircraft.type1= 'EUFI'
+                    aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
             # Prevent empty type codes
-            elif not aircraft.type1 or aircraft.type1 == 'None':
+            elif aircraft.type1.strip() == 'None' or aircraft.type1.strip() == '-':
                 aircraft.type1 == None
             
-            # Remove xxxx like registrations
-            if (aircraft.reg and len(aircraft.reg) == 4 and ((aircraft.reg[0].isdigit() and aircraft.reg.count('x') == 3) or aircraft.reg.count('x') == 4)) \
-                or aircraft.reg == '-' or not aircraft.reg:
+            # Sanitize registrations
+            if aircraft.reg:
+                if (len(aircraft.reg) == 4 and ((aircraft.reg[0].isdigit() and aircraft.reg.count('x') == 3) or aircraft.reg.count('x') == 4)):
+                    aircraft.reg = None
+                elif aircraft.reg.strip() == '-':
+                    aircraft.reg = None
+            else:
                 aircraft.reg = None
 
             # Remove empty operators
-            if not aircraft.operator or aircraft.operator == '-':
+            if not aircraft.operator or aircraft.operator.strip() == '-':
                 aircraft.operator = None
 
 
