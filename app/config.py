@@ -6,7 +6,7 @@ class Config():
 
     """ Application configuration """
 
-    DATA_FOLDER = 'resources/'
+    DATA_FOLDER = 'resources'
     RADAR_SERVICE_URL = 'http://flightlive.gotdns.ch:8084/VirtualRadar'
     RADAR_SERVICE_TYPE = 'vrs'
     MILTARY_ONLY = False

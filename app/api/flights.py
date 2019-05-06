@@ -34,9 +34,8 @@ def get_all_positions():
 
     archived = get_boolean_arg('archived')
     positions = DBRepository.get_all_positions(archived)
-    entries = [[[p.lat, p.lon, p.alt] for p in l] for l in positions] 
 
-    return Response(json.dumps(entries), mimetype='application/json')
+    return Response(json.dumps(positions), mimetype='application/json')
 
 
 #@api.before_request

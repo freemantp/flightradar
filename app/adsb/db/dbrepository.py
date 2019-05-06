@@ -34,17 +34,21 @@ class DBRepository:
     @staticmethod
     def get_all_positions(is_archived=False):
 
-        flight_data = []
+        pos = (Position.select(Flight.modeS, Position.lat, Position.lon, Position.alt, Position.timestmp)
+              .join(Flight)
+              .where(Flight.archived == is_archived)
+              .order_by(Position.flight_fk, Position.timestmp.asc())
+        )
 
-        for flight in Flight.select(Flight.id).where(Flight.archived == is_archived):
+        positions_map = {}
+
+        for p in pos:
+            if p.flight_fk.modeS not in positions_map:
+                positions_map[p.flight_fk.modeS] = []
             
-            pos = (Position.select()
-                    .where(Position.flight_fk == flight.id )
-                    .order_by(Position.flight_fk, Position.timestmp.asc()) )
+            positions_map[p.flight_fk.modeS].append((p.lat, p.lon, p.alt))
 
-            flight_data.append(list(pos))
-
-        return flight_data
+        return positions_map
 
     @staticmethod
     def get_positions(flight_id):

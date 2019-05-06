@@ -1,5 +1,6 @@
 import peewee as pw
 import datetime
+from os import path
 
 from playhouse.sqliteq import SqliteQueueDatabase
 
@@ -20,7 +21,7 @@ class Flight(pw.Model):
         return 'Flight id={:d}, callsign={:s}, modeS={:s}, archived={:s}, last_contact={:s}'.format( self.id, str(self.callsign), str(self.modeS), str(self.archived), str(self.last_contact) )
 
 class Position(pw.Model):
-    flight_fk = pw.ForeignKeyField(Flight)
+    flight_fk = pw.ForeignKeyField(Flight, backref='positions')
     lat = pw.FloatField()
     lon = pw.FloatField()   
     alt = pw.IntegerField(null=True)
@@ -40,7 +41,7 @@ TRIGGER_CREATE = 'CREATE TRIGGER flight_timestmp_trigger AFTER INSERT ON Positio
 def init_db_schema(data_folder):
 
     position_db = SqliteQueueDatabase(
-        '{:s}/positions.db'.format(data_folder),
+        path.join(data_folder, 'flights.sqlite'),
         use_gevent=False,  # Use the standard library "threading" module.
         autostart=True,  # The worker thread now must be started manually.
         queue_max_size=64,  # Max. # of pending writes that can accumulate.

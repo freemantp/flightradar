@@ -114,7 +114,7 @@ class FlightUpdater(object):
                     Flight.update(callsign = modeS_callsgn[1]).where(Flight.id == flight_results[0].id).execute()
                     logger.info('updated {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None" ,modeS_callsgn[0]))
                 else:
-                    #TODO: Insert a new Flight!
+                    #logger.warning('A new flight should have been inserted')
                     pass
             
             else:

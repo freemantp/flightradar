@@ -1,5 +1,6 @@
 from flask import Flask, Blueprint, g
 import logging
+from os import path
 
 from .config import Config
 from .adsb.db.basestationdb import BaseStationDB
@@ -13,12 +14,11 @@ logging.basicConfig(level=logging.INFO)
 main = Blueprint('main', __name__)
 
 def get_basestation_db():
-
     from flask import current_app as app
 
     basestation_db = getattr(g, '_basestation_db', None)
     if basestation_db is None:
-        basestation_db = g._basestation_db = BaseStationDB(app.config['DATA_FOLDER'] + "BaseStation.sqb") #TODO: path join
+        basestation_db = g._basestation_db = BaseStationDB(path.join(app.config['DATA_FOLDER'], 'BaseStation.sqb'))
     return basestation_db
 
 def create_updater(config):    
