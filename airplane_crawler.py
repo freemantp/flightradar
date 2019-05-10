@@ -16,13 +16,21 @@ import signal
 import sys
 import json
 import logging
+from os import path
 
 adsb_config = Config()
 
 init_logging(adsb_config.LOGGING_CONFIG)
 logger =  logging.getLogger("Updater")
 
-bs_db = BaseStationDB(adsb_config.DATA_FOLDER + "BaseStation.sqb")
+db_file = path.join(adsb_config.DATA_FOLDER, 'BaseStation.sqb')
+bs_db = None
+
+if path.exists(db_file):
+    bs_db = BaseStationDB(db_file)
+else:
+    logger.error('database file not found: {:s}'.format(db_file))
+
 sources = [BazlLFR(), 
 OpenskyNet(), 
 AdsbNL(adsb_config.DATA_FOLDER),
@@ -122,7 +130,10 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 1:
         logger.info("Starting live update")        
-        update_live()
+        if bs_db:
+            update_live()
+        else:
+            sys.exit(-1)
     elif len(sys.argv) == 2 and sys.argv[1] == '--csv':
         read_csv(r'data.csv')
     else:

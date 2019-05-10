@@ -35,7 +35,7 @@ See section below for details
 * ```type``` The type of your radar service, eithr vrs for VirtualRadarServer or mm2 for ModeSMixer2  
 * ```dataFolder``` the absolute path to your resources folder
 * ```militaryOnly``` Whether everything other than military planes should be filtered (true or false)
-* ```dbRetentionMinutes``` Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely
+* ```deleteAfterMinutes``` Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely
 * ```logging``` [optional] This section allows to configure logging.
     * ```syslogHost``` The host to send logs to 
     * ```syslogFormat``` The syslog log format
