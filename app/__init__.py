@@ -1,4 +1,5 @@
 from flask import Flask, Blueprint, g
+from werkzeug.contrib.fixers import ProxyFix
 from os import path
 
 from .config import Config
@@ -26,6 +27,8 @@ def create_updater(config):
 
 def create_app():
     app = Flask(__name__)
+
+    app.wsgi_app = ProxyFix(app.wsgi_app)
 
     conf = Config()
     app.config.from_object(conf)

@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     mil_ranges = ModesUtil(app_cfg.data_folder)
 
-    bs_db = BaseStationDB(app_cfg.data_folder + "BaseStation.sqb")
+    bs_db = BaseStationDB(file_name = path.join(app_cfg.data_folder, 'BaseStation.sqb'))
     found_mil_ac = set()
 
     def handle_ac(icao24):
