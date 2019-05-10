@@ -1,8 +1,41 @@
 import json
 import os
+import logging
 from pathlib import Path
 
-class Config():
+class LoggingConfig:
+
+    syslogHost = None
+    syslogFormat = None
+    logLevel = logging.INFO
+    logToConsole = True
+
+    @staticmethod
+    def from_json(json):
+        syslogHost = json['syslogHost']
+        syslogFormat = json['syslogFormat']
+        logToConsole = True
+        logLevel = logging.INFO
+
+        if not syslogHost or not syslogFormat:
+            raise ValueError('Incomplete logging config')     
+
+        if 'logLevel' in json:
+            logLevel = logging.getLevelName(json['logLevel'].strip().upper())
+
+        if 'logToConsole' in json:
+            logToConsole = json['logToConsole']
+
+        return LoggingConfig(syslogHost, syslogFormat, logToConsole, logLevel)
+
+    def __init__(self, syslogHost, syslogFormat, logToConsole=True, logLevel=logging.INFO):
+        self.syslogHost = syslogHost
+        self.syslogFormat = syslogFormat
+        self.logLevel = logLevel
+        self.logToConsole = logToConsole
+
+
+class Config:
 
     """ Application configuration """
 
@@ -11,6 +44,7 @@ class Config():
     RADAR_SERVICE_TYPE = 'vrs'
     MILTARY_ONLY = False
     DB_RETENTION_MIN = 1440
+    LOGGING_CONFIG = None
 
     def __init__(self):
 
@@ -73,6 +107,12 @@ class Config():
 
             if 'deleteAfterMinutes' in config:
                 self.DB_RETENTION_MIN = config['deleteAfterMinutes']
+
+            if 'logging' in config:
+                try:
+                    self.LOGGING_CONFIG = LoggingConfig.from_json(config['logging'])
+                except ValueError as e:
+                    logging.getLogger().error(e)
 
     def __str__(self):
         return 'DATA_FOLDER: {0}, RADAR_SERVICE_URL: {1}, type: {2}, mil_only: {3}, delete_after: {4}'.format(self.DATA_FOLDER, self.RADAR_SERVICE_URL, self.RADAR_SERVICE_TYPE, self.MILTARY_ONLY, self.DB_RETENTION_MIN) 

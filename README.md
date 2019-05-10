@@ -36,10 +36,19 @@ See section below for details
 * ```dataFolder``` the absolute path to your resources folder
 * ```militaryOnly``` Whether everything other than military planes should be filtered (true or false)
 * ```dbRetentionMinutes``` Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely
+* ```logging``` [optional] This section allows to configure logging.
+    * ```syslogHost``` The host to send logs to 
+    * ```syslogFormat``` The syslog log format
+    * ```logLevel``` [optional] Log level, See https://docs.python.org/2/library/logging.html#logging-levels
+    * ```logToConsole``` [optional] If true, logs are logged to syslog and to console, if false only to syslog
+
+## Running
 
 
-## Running 
 
-```python3 web.py```
+```
+SET FLASK_APP=flightradar.py
+flask run
+```
 
 

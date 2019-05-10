@@ -12,10 +12,14 @@ from .db.dbmodels import Position, Flight
 from .db.dbrepository import DBRepository
 from ..config import Config
 
+from flask import current_app
+
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
 
-logger = logging.getLogger(__name__)
+from .util.logging import LOGGER_NAME
+
+logger = logging.getLogger('Updater')
 
 @Singleton
 class FlightUpdater(object):

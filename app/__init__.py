@@ -1,15 +1,13 @@
 from flask import Flask, Blueprint, g
-import logging
 from os import path
 
 from .config import Config
 from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db_schema
 from .adsb.flightupdater import FlightUpdater
+from .adsb.util.logging import init_logging
 
 import atexit
-
-logging.basicConfig(level=logging.INFO)
 
 main = Blueprint('main', __name__)
 
@@ -31,6 +29,7 @@ def create_app():
 
     conf = Config()
     app.config.from_object(conf)
+    init_logging(conf.LOGGING_CONFIG)
 
     flight_db = init_db_schema(conf.DATA_FOLDER)
 

@@ -9,6 +9,7 @@ from app.adsb.datasource.virtualradarserver import VirtualRadarServer
 from app.adsb.db.basestationdb import BaseStationDB
 from app.adsb.util.tabular import Tabular
 from app.config import Config
+from app.adsb.util.logging import init_logging
 
 import time
 import signal
@@ -16,15 +17,12 @@ import sys
 import json
 import logging
 
-logging.basicConfig(level=logging.INFO)
+adsb_config = Config()
 
+init_logging(adsb_config.LOGGING_CONFIG)
 logger =  logging.getLogger("Updater")
 
-adsb_config = Config()
-adsb_config.from_file('config.json')
-
 bs_db = BaseStationDB(adsb_config.DATA_FOLDER + "BaseStation.sqb")
-
 sources = [BazlLFR(), 
 OpenskyNet(), 
 AdsbNL(adsb_config.DATA_FOLDER),
@@ -123,7 +121,7 @@ def read_csv(file):
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
-        logger.info("Starting live update")
+        logger.info("Starting live update")        
         update_live()
     elif len(sys.argv) == 2 and sys.argv[1] == '--csv':
         read_csv(r'data.csv')

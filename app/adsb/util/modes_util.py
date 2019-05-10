@@ -1,6 +1,7 @@
 import time
 import datetime
 import csv
+from os import path
 
 from ...config import Config
 
@@ -13,7 +14,9 @@ class ModesUtil:
 
         self.ranges = []
 
-        with open(folder + "mil_ranges.csv", newline='') as csvfile:
+        file_name = path.join(folder, 'mil_ranges.csv')
+
+        with open(file_name, newline='') as csvfile:
             rreader = csv.reader(csvfile, delimiter=';', quotechar='|')
             for row in rreader:
                 newrange = (int(row[0]), int(row[1]))

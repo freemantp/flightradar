@@ -3,5 +3,11 @@
     "type" : "vrs",
     "dataFolder" : "D:\\path\\to\\resources\\",
     "militaryOnly" : false,
-    "dbRetentionMinutes" :  1
+    "dbRetentionMinutes" :  1,
+    "logging": {
+        "syslogHost": "syslog.host.com",
+        "syslogFormat":"mysematexkey:%(message)s",
+        "logLevel": "DEBUG",
+        "logToConsole": true
+    }
 }
