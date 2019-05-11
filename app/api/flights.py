@@ -1,11 +1,9 @@
-import json
-
 from . import api
 from .. import get_basestation_db
 from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
 
-from flask import current_app as app, Response,request
+from flask import current_app as app, Response, request, jsonify
 
 @api.route("/flight/<flight_id>/positions") 
 def get_positions(flight_id):
@@ -19,7 +17,7 @@ def get_positions(flight_id):
 
             if positions:
                 pos_entries = [[ [p.lat, p.lon, p.alt] for p in positions]]
-                return Response(json.dumps(pos_entries), mimetype='application/json')
+                return jsonify(pos_entries)
 
         except ValueError:
             return "Invalid flight id format", 400
@@ -31,21 +29,15 @@ def get_positions(flight_id):
 
 @api.route("/positions") 
 def get_all_positions():
-
     archived = get_boolean_arg('archived')
     positions = DBRepository.get_all_positions(archived)
+    return jsonify(ositions)
 
-    return Response(json.dumps(positions), mimetype='application/json')
-
-
-#@api.before_request
-#def before_request():
-#    if pos_db.is_closed():
-#        pos_db.connect()
 
 @api.after_request
 def after_request(response):
-    #pos_db.close()
+
+    #TODO: look into Flask-Cors (https://flask-cors.readthedocs.io)
 
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')

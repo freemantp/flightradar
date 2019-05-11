@@ -10,7 +10,6 @@ from ..util.modes_util import ModesUtil
 
 logger = logging.getLogger('BAZL-LFR')
 
-
 class BazlLFR:
 
     """ Bazl LFR Queries """

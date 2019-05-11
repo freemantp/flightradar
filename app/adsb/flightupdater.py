@@ -1,4 +1,3 @@
-from threading import Timer
 from time import sleep
 import datetime
 import logging
@@ -58,7 +57,7 @@ class FlightUpdater(object):
 
             # TODO: Cleanup modeS_flight_map as well!
 
-    def _run(self):
+    def update(self):
 
         positions = self._service.query_live_flights(False)
 
@@ -80,9 +79,6 @@ class FlightUpdater(object):
             logger.info('Database timeout')
         except:
             logger.exception("An error occured")
-
-        self._t = Timer(self.sleep_time, self._run)
-        self._t.start()
 
     def add_positions(self, position_array):
 
@@ -134,21 +130,6 @@ class FlightUpdater(object):
                     logger.info('inserted {:s} ({:s})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0] ))
 
                 self.modeS_flight_map[modeS_callsgn[0]] = flight_id
-
-    def start(self):
-        if self._t is None:
-            self._t = Timer(self.sleep_time, self._run)
-            self._t.start()
-        else:
-            raise Exception("this timer is already running")
-
-    def stop(self):
-        if self._t is not None:
-            self._t.cancel()
-            self._t = None
-
-    def isAlive(self):
-        return self._t.isAlive()
 
     def get_silhouete_params(self):
         return self._service.get_silhouete_params()
