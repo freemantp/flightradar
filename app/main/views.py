@@ -59,7 +59,7 @@ def render_flights(flights, archived = False):
     updater = FlightUpdater.Instance()
 
     metaInfo = {
-        'updaterAlive' : updater.isAlive(),
+        'updaterAlive' : True,
         'serviceAlive' : updater.is_service_alive(),
         'mode' : 'ModeSmixer2' if app.config['RADAR_SERVICE_TYPE'] == 'mm2' else 'VirtualRadar',
         'archived' : archived
