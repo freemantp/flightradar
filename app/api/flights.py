@@ -32,14 +32,3 @@ def get_all_positions():
     archived = get_boolean_arg('archived')
     positions = DBRepository.get_all_positions(archived)
     return jsonify(positions)
-
-
-@api.after_request
-def after_request(response):
-
-    #TODO: look into Flask-Cors (https://flask-cors.readthedocs.io)
-
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
-    return response    
