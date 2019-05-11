@@ -9,6 +9,7 @@ from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db_schema
 from .adsb.flightupdater import FlightUpdater
 from .adsb.util.logging import init_logging
+from .adsb.datasource.airplane_crawler import AirplaneCrawler
 
 main = Blueprint('main', __name__)
 
@@ -50,17 +51,25 @@ def create_app():
     updater = create_updater(conf)
     app.updater = updater
 
+    crawler = AirplaneCrawler(conf)
+    app.crawler = crawler
+
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint, url_prefix='/')
 
-    @scheduler.task('interval', id='flight_updater_job', seconds=1)
-    def flight_update_job():
+    @scheduler.task('interval', id='flight_updater_job', seconds=1, misfire_grace_time=1, coalesce=True)
+    def update_flights():
 
         with app.app_context():
              app.updater.update()
+
+    @scheduler.task('interval', id='airplane_crawler', seconds=20)
+    def crawl_airplanes():
+        with app.app_context():
+             app.crawler.crawl_sources()    
 
     @atexit.register
     def _stop_worker_threads():

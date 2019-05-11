@@ -31,7 +31,7 @@ def get_positions(flight_id):
 def get_all_positions():
     archived = get_boolean_arg('archived')
     positions = DBRepository.get_all_positions(archived)
-    return jsonify(ositions)
+    return jsonify(positions)
 
 
 @api.after_request
