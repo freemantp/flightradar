@@ -15,13 +15,13 @@ class Flightradar24:
 
         self.conn = HTTPSConnection("api.flightradar24.com")
         self.headers = {
-            'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
+            'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0',
             "Content-type": "application/json",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
-        self.timeout = 10
         self.maxretires = 5
+        self.failcounter = 0
 
     @staticmethod
     def name():
@@ -30,13 +30,30 @@ class Flightradar24:
     def accept(self, modes_address):
         return True
 
+    @staticmethod
+    def _get_timeout_sec(retry_attempt):
+
+        """ Seconds in function of retry attempt, basically a Fibonacci seq with offset"""
+        n = 6 + retry_attempt
+        #
+        a,b = 1,1
+        for i in range(n-1):
+            a,b = b,a+b
+
+        return a
+
+    def _fail_and_sleep(self):
+        seconds = Flightradar24._get_timeout_sec(self.failcounter)
+        logger.warn('Sleeping for {:d}sec'.format(seconds))
+        time.sleep(seconds)
+        self.failcounter += 1
+
     def query_aircraft(self, mode_s_hex):
 
         """ queries aircraft data """
 
-        failcounter = 0
-
-        while failcounter < self.maxretires:
+        self.failcounter = 0
+        while self.failcounter < self.maxretires:
             try:
                 self.conn.request('GET', "/common/v1/search.json?fetchBy=reg&query=%s" % mode_s_hex, headers=self.headers)
                 res = self.conn.getresponse()
@@ -53,42 +70,30 @@ class Flightradar24:
                             operator = aircraft['airline']['name']
                         else:
                             operator = None
-
                         return Aircraft(mode_s_hex, reg, type1, type2, operator)
 
-                elif res.status == 402:
-                    failcounter += 1
+                elif res.status == 402:                    
                     res.read()
-
-                    #logger.error('402, sleeping for {}sec'.format( self.timeout ) )
-                    time.sleep(self.timeout)
-                    self.timeout += 1
+                    logger.warn('HTTP 402 - Payment Required')
+                    self._fail_and_sleep()
                 elif res.status >= 500 and res.status < 600:
                      res.read()
-                     time.sleep(20)               
+                     self._fail_and_sleep()              
                 else:
                     res.read()
                     raise ValueError('Unexpected http code: %s' % res.status)
-            except RemoteDisconnected:
-                failcounter += 1
-                time.sleep(failcounter * 5)
-                logger.error("RemoteDisconnected, waiting some time")
-            except IncompleteRead:
-                failcounter += 1
-                time.sleep(failcounter * 3)
-                logger.error("IncompleteRead, waiting some time")
-            except ConnectionError:
-                failcounter += 1
-                time.sleep(failcounter)
-                logger.error("ConnectionError, waiting some time")
-            except CannotSendRequest:
-                failcounter += 1
-                time.sleep(failcounter)
-                logger.error("CannotSendRequest, waiting some time")
+            except (RemoteDisconnected, IncompleteRead, ConnectionError, CannotSendRequest) as e:                             
+                logger.error(e)
+                self._fail_and_sleep() 
+            except (KeyboardInterrupt, SystemExit):
+                raise                
             except:
                 logger.exception('An unexpected error occured')
+                self._fail_and_sleep() 
 
-        # if failcounter == self.maxretires:
-        #     logger.warning("Too many failures for %s, giving up" % mode_s_hex)
-
+        if self.failcounter == self.maxretires:
+            logger.warning('Too many failures for {:s}, giving up'.format(mode_s_hex))
+        
         return None
+
+

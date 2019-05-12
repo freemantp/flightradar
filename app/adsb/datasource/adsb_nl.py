@@ -94,6 +94,8 @@ class AdsbNL:
 
         except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
             logger.exception(ex)
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except:
             logger.exception('An unexpected error occured')    
 

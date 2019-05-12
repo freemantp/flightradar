@@ -100,6 +100,8 @@ class AirplaneCrawler:
                                 if self.bs_db.insert_aircraft(aircraft_response):
                                     self.insert_count += 1
                                     logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
+                    except (KeyboardInterrupt, SystemExit):
+                        raise
                     except:
                         logger.exception("An error occured")
 

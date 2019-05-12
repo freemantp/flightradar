@@ -99,10 +99,12 @@ class BazlLFR:
                     return Aircraft(mode_s_hex, reg, type1, type2, operator)
             else:
                 res.read()
-                raise ValueError(
-                    'Unexpected http code {:s}'.format(res.status))
+                raise ValueError('Unexpected http code {:s}'.format(res.status))
+                
         except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
             logger.exception(ex)
+        except (KeyboardInterrupt, SystemExit):
+            raise            
         except:
             logger.exception('An unexpected error occured')    
 

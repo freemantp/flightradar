@@ -77,6 +77,8 @@ class FlightUpdater(object):
 
         except ResultTimeout:
             logger.info('Database timeout')
+        except (KeyboardInterrupt, SystemExit):
+            raise            
         except:
             logger.exception("An error occured")
 

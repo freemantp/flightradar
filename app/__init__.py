@@ -60,13 +60,13 @@ def create_app():
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint, url_prefix='/')
 
-    @scheduler.task('interval', id='flight_updater_job', seconds=1, misfire_grace_time=1, coalesce=True)
+    @scheduler.task('interval', id='flight_updater_job', seconds=1, misfire_grace_time=3, coalesce=True)
     def update_flights():
 
         with app.app_context():
              app.updater.update()
 
-    @scheduler.task('interval', id='airplane_crawler', seconds=20)
+    @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
     def crawl_airplanes():
         with app.app_context():
              app.crawler.crawl_sources()    

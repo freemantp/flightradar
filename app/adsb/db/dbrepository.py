@@ -32,6 +32,10 @@ class DBRepository:
         return Flight.select().where(Flight.modeS == modeS_addr)
 
     @staticmethod
+    def flight_exists(flight_id):
+        return Flight.select().where(Flight.id == flight_id).exists()
+
+    @staticmethod
     def get_all_positions(is_archived=False):
 
         pos = (Position.select(Flight.modeS, Position.lat, Position.lon, Position.alt, Position.timestmp)
