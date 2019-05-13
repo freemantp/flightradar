@@ -3,6 +3,7 @@ from os import path
 from flask_apscheduler import APScheduler
 import atexit
 import logging
+import time
 
 from .config import Config
 from .adsb.db.basestationdb import BaseStationDB
@@ -66,10 +67,10 @@ def create_app():
         with app.app_context():
              app.updater.update()
 
-    # @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
-    # def crawl_airplanes():
-    #     with app.app_context():
-    #          app.crawler.crawl_sources()    
+    @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
+    def crawl_airplanes():
+        with app.app_context():
+             time.sleep(25)
 
     @atexit.register
     def _stop_worker_threads():
