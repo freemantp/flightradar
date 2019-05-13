@@ -2,6 +2,9 @@ from time import sleep
 import datetime
 import logging
 
+from timeit import default_timer as timer
+from datetime import timedelta
+
 from ..util.singleton import Singleton
 
 from .datasource.modesmixer import ModeSMixer
@@ -59,7 +62,9 @@ class FlightUpdater(object):
 
     def update(self):
 
+        start = timer()
         positions = self._service.query_live_flights(False)
+        start_insert = timer()
 
         try:
             if positions:
@@ -81,6 +86,10 @@ class FlightUpdater(object):
             raise            
         except:
             logger.exception("An error occured")
+
+        end_insert = timer()
+
+        print('query: {}, insert: {}, total: {}'.format(timedelta(seconds=start_insert-start), timedelta(seconds=end_insert-start_insert), timedelta(seconds=end_insert-start)))
 
     def add_positions(self, position_array):
 

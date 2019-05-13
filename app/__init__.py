@@ -46,7 +46,7 @@ def create_app():
     scheduler.init_app(app)
     scheduler.start()
 
-    logging.getLogger("apscheduler.executors.default").setLevel('WARN')
+    #logging.getLogger("apscheduler.executors.default").setLevel('WARN')
 
     updater = create_updater(conf)
     app.updater = updater
