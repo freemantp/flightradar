@@ -66,10 +66,10 @@ def create_app():
         with app.app_context():
              app.updater.update()
 
-    @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
-    def crawl_airplanes():
-        with app.app_context():
-             app.crawler.crawl_sources()    
+    # @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
+    # def crawl_airplanes():
+    #     with app.app_context():
+    #          app.crawler.crawl_sources()    
 
     @atexit.register
     def _stop_worker_threads():
