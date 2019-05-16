@@ -1,4 +1,5 @@
 import unittest
+import time
 
 from app.adsb.flightupdater import FlightUpdater
 from app.adsb.db.dbmodels import Position, Flight
@@ -28,7 +29,7 @@ class FlightUpdaterTest(DbBaseTestCase):
         DbBaseTestCase.tearDown(self)
 
     def test_update(self):
-
+        "Test flight/position insertion"
         self.sut._service.flights = [
             ('12345', 41.1, 60.1, 1723, 'CLLSGN'),
             ('12345', 44.1, 63.1, 1723, None),
@@ -41,7 +42,7 @@ class FlightUpdaterTest(DbBaseTestCase):
         self.assertEqual(2, Position.select().count())
 
     def test_update_no_duplicate(self):
-
+        """Test duplicate elimination"""
         self.sut._service.flights = [
             ('12345', 41.1, 60.1, 1723, 'CLLSGN'),
             ('12345', 44.1, 63.1, 1723, None)
@@ -57,6 +58,21 @@ class FlightUpdaterTest(DbBaseTestCase):
 
         self.assertEqual(2, Position.select().count())
 
+    def test_cleanup(self):
+        """ Test stale flight / position cleanup"""
+        self.sut._service.flights = [
+            ('12345', 41.1, 60.1, 1723, 'CLLSGN'),
+            ('12345', 44.1, 63.1, 1723, None)
+        ]
 
-if __name__ == '__main__':
-    unittest.main()
+        self.sut.update()
+        
+        time.sleep(1.1)
+
+        self.sut._delete_after = float(1 / 60)
+        self.sut.cleanup_items()
+
+        self.assertEqual(0, Position.select().count())
+        self.assertEqual(0, Flight.select().count())
+        self.assertFalse(self.sut.modeS_flight_map)
+        self.assertFalse(self.sut.flight_lastpos_map)
