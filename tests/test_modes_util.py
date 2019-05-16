@@ -24,7 +24,3 @@ class ModeSUtilTests(unittest.TestCase):
 
     def test_mil_swiss(self):
         self.assertTrue(self.sut.is_swiss_mil(0x4B7F45))
-        
-
-if __name__ == '__main__':
-    unittest.main()

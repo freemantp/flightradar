@@ -69,9 +69,9 @@ class FlightUpdater(object):
     def cleanup_items(self): #TODO schedule this with APScheduler
 
         if self._delete_after > 0:
-            delete_timestamp = datetime.datetime.utcnow(
-            ) - datetime.timedelta(minutes=self._delete_after)
-
+            
+            delete_timestamp = datetime.datetime.utcnow() - datetime.timedelta(minutes=self._delete_after)
+            
             for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
                 # TODO: Why not cleaned up?
                 DBRepository.delete_flight_and_positions(flight.id)

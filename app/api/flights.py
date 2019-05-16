@@ -17,7 +17,6 @@ def get_positions(flight_id):
             pos_entries = [[ [p.lat, p.lon, p.alt] for p in positions]]
             return jsonify(pos_entries)
         else:
-            print("Not found")
             abort(404)
 
     except ValueError:
