@@ -146,8 +146,7 @@ class FlightUpdater(object):
                 if flight_results and modeS_callsgn[1]:
                     Flight.update(callsign=modeS_callsgn[1]).where(
                         Flight.id == flight_results[0].id).execute()
-                    logger.info('updated {:s} ({:s})'.format(
-                        modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
+                    logger.info('updated {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
                 else:
                     # TODO: really?
                     # logger.warning('A new flight should have been inserted')
@@ -160,13 +159,11 @@ class FlightUpdater(object):
 
                 if flight_results:
                     flight_id = flight_results[0].id
-                    logger.info('present in db {:s} ({:s})'.format(
-                        modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
+                    logger.info('present in db {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
                 else:
                     flight_id = Flight.insert(
                         modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()
-                    logger.info('inserted {:s} ({:s})'.format(
-                        modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
+                    logger.info('inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
 
                 self.modeS_flight_map[modeS_callsgn[0]] = (flight_id, None)
 
