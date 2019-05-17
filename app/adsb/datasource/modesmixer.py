@@ -15,20 +15,19 @@ class ModeSMixer(RadarService):
         self.headers['Content-type'] = 'application/json'
         self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
         self.epoch = 0
+        self.conn = self.get_connection()
 
     def get_request_body(self):
         return self.body % self.epoch
 
     def get_flight_info(self, force_initial=False):
 
-        conn = self.get_connection()
-
         try:
             msg_body = self.body % (0 if force_initial else self.epoch)
 
-            conn.request('POST', self._url_parms.path +
+            self.conn.request('POST', self._url_parms.path +
                          '/json', body=msg_body, headers=self.headers)
-            res = conn.getresponse()
+            res = self.conn.getresponse()
             data = res.read()
 
             if res.code == 200:
@@ -43,9 +42,6 @@ class ModeSMixer(RadarService):
         except (ConnectionRefusedError, OSError) as err:
             logger.error(err)
 
-        if conn:
-            conn.close()
-        self.connection_alive = False
         return None
 
     def query_live_icao24(self):
