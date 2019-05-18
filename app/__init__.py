@@ -46,5 +46,5 @@ def create_app():
     def _stop_worker_threads():
         flight_db.stop()
 
-    return app
+    return app, flight_db
 

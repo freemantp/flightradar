@@ -1,9 +1,8 @@
 from time import sleep
-import datetime
+from  datetime import datetime, timedelta
 import logging
 
 from timeit import default_timer as timer
-from datetime import timedelta
 
 from ..util.singleton import Singleton
 
@@ -27,6 +26,8 @@ logger = logging.getLogger('Updater')
 @Singleton
 class FlightUpdater(object):
 
+    MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT = 10
+
     def initialize(self, config):
 
         self.sleep_time = 1
@@ -39,16 +40,18 @@ class FlightUpdater(object):
         else:
             raise ValueError('Service type not specified in config')
 
-        self._delete_after = config.DB_RETENTION_MIN
         self._mil_ranges = ModesUtil(config.DATA_FOLDER)
         self._mil_only = config.MILTARY_ONLY
         self.interrupted = False
 
-        self._delete_after = config.DB_RETENTION_MIN
-        self.modeS_flight_map = dict()
-        self.flight_lastpos_map = dict()
         # see https://stackoverflow.com/questions/35616602/peewee-operationalerror-too-many-sql-variables-on-upsert-of-only-150-rows-8-c#36788489
         self._insert_batch_size = 50
+        self._delete_after = config.DB_RETENTION_MIN
+
+        # Lookup stuctures
+        self.modeS_flight_map = dict()
+        self.flight_lastpos_map = dict()
+        self._initialize_from_db()
 
     def is_service_alive(self):
         return self._service.connection_alive
@@ -57,7 +60,7 @@ class FlightUpdater(object):
 
         if self._delete_after > 0:
             
-            delete_timestamp = datetime.datetime.utcnow() - datetime.timedelta(minutes=self._delete_after)
+            delete_timestamp = datetime.utcnow() - timedelta(minutes=self._delete_after)
             
             for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
                 # TODO: Why not cleaned up?
@@ -67,7 +70,17 @@ class FlightUpdater(object):
                 logger.debug('Deleted flight {:s} (id={:d})'.format(
                     str(flight.callsign), flight.id))
 
-    
+    def _threshold_timestamp(self):
+        return datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
+
+    def _initialize_from_db(self):
+
+        recent_flight_timestamp = datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
+        
+        for pos_flights in DBRepository.get_recent_flights_last_pos(recent_flight_timestamp):
+            self.modeS_flight_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id
+            self.flight_lastpos_map[pos_flights.flight_fk.id] = (pos_flights.flight_fk.id, pos_flights.lat, pos_flights.lon, pos_flights.alt )
+
     def update(self):
 
         start_time = timer()
@@ -111,7 +124,7 @@ class FlightUpdater(object):
         """ Inserts positions into the database"""
 
         # Create tuples suitable for DB insertion
-        db_tuples = [(self.modeS_flight_map[p[0]][0], p[1], p[2], p[3]) for p in positions]
+        db_tuples = [(self.modeS_flight_map[p[0]], p[1], p[2], p[3]) for p in positions]
 
         # If position is the same as last time, filter it
         db_tuples = [t for t in db_tuples 
@@ -130,15 +143,13 @@ class FlightUpdater(object):
                     db_tuples[i:i+self._insert_batch_size], fields=fields).execute()
 
     def update_flights(self, flights):
-        """ Updates flights in the database"""
+        """ Inserts and updates  flights in the database"""
 
-        # None for a callsign is allowed
-        active_flights = [(f[0], f[4]) for f in flights]  # (modeS, callsign)
-
-        for modeS_callsgn in active_flights:
+        # (modeS, callsign), None for a callsign is allowed
+        for modeS_callsgn in  [(f[0], f[4]) for f in flights]:
 
             # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
-            thresh_timestmp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+            thresh_timestmp = self._threshold_timestamp()
 
             if modeS_callsgn[0] in self.modeS_flight_map:
 
@@ -167,7 +178,7 @@ class FlightUpdater(object):
                         modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()
                     logger.info('inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else "None", modeS_callsgn[0]))
 
-                self.modeS_flight_map[modeS_callsgn[0]] = (flight_id, None)
+                self.modeS_flight_map[modeS_callsgn[0]] = flight_id
 
     def get_silhouete_params(self):
         return self._service.get_silhouete_params()

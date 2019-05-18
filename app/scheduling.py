@@ -47,5 +47,3 @@ def configure_scheduling(app: Flask, conf: Config):
     def crawl_airplanes():
         with app.app_context():
              time.sleep(25)
-
-    scheduler.start()

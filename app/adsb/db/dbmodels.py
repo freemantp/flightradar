@@ -32,7 +32,7 @@ class Position(pw.Model):
         primary_key = False
 
     def __repr__(self):
-        return 'flight={:d} pos=({:f},{:f},{:d}) at={:s}'.format( self.flight_fk, self.lat, self.lon, self.alt, str(self.timestmp) )
+        return 'flight={:d} pos=({:f},{:f},{:d}) at={:s}'.format( self.flight_fk.id, self.lat, self.lon, self.alt, str(self.timestmp) )
 
 DB_MODEL_CLASSES = [Flight, Position]
 

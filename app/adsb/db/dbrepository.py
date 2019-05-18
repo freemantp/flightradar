@@ -1,5 +1,6 @@
 from .dbmodels import Position, Flight
 from datetime import datetime, timedelta
+from peewee import fn
 
 class DBRepository:
 
@@ -60,6 +61,27 @@ class DBRepository:
                         .where(Position.flight_fk == flight_id)
                         .order_by(Position.flight_fk, Position.timestmp.asc()))
 
+    @staticmethod
+    def get_recent_flights_last_pos(timestamp=datetime.min):
+
+        """ Retreives flights with their most recent positon. 
+        Only flights with activity newer than the passed timestamp will be considered"""
+
+        Latest = Position.alias()
+        latest_query = (Latest
+            .select(Latest.flight_fk, fn.MAX(Latest.timestmp).alias('max_ts'))
+            .group_by(Latest.flight_fk)
+            .alias('latest_query'))
+
+        predicate = ((Position.flight_fk == latest_query.c.flight_fk_id) &
+            (Position.timestmp == latest_query.c.max_ts))
+
+        return (Position
+            .select(Position, Flight)
+            .join(latest_query, on=predicate)
+            .join_from(Position, Flight)
+            .where(Flight.last_contact > timestamp))
+            
     @staticmethod
     def get_non_archived_flights_older_than(timestamp):
             return Flight.select(Flight.modeS, Flight.id, Flight.callsign, Flight.last_contact).where((Flight.last_contact < timestamp) & (Flight.archived == False ))
