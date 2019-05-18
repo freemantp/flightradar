@@ -23,20 +23,7 @@ from .util.logging import LOGGER_NAME
 
 logger = logging.getLogger('Updater')
 
-
-class PositionEntry:
-
-    def __init__(self, lat, lon, alt):
-        self.lat = lat
-        self.lon = lon
-        self.alt = alt
-
-    def __eq__(self, other: Position):
-        return other and self.lat == other.lat  \
-            and self.lon == other.lon \
-            and self.alt == other.alt
-
-#TODO: Remove singleton
+#TODO: Why singleton?
 @Singleton
 class FlightUpdater(object):
 
@@ -81,12 +68,11 @@ class FlightUpdater(object):
                     str(flight.callsign), flight.id))
 
     
-
     def update(self):
 
-        start = timer()
+        start_time = timer()
         positions = self._service.query_live_flights(False)
-        start_insert = timer()
+        end_service_time = timer()
 
         try:
             if positions:
@@ -110,10 +96,16 @@ class FlightUpdater(object):
         except:
             logger.exception("An error occured")
 
-        end_insert = timer()
+        end_time = timer()
+        execution_time = timedelta(seconds=end_time-start_time)
 
-        # print('query: {}, insert: {}, total: {}'.format(timedelta(seconds=start_insert-start),
-        #                                                 timedelta(seconds=end_insert-start_insert), timedelta(seconds=end_insert-start)))
+        if execution_time > timedelta(seconds=1):
+
+            service_delta = timedelta(seconds=end_service_time-start_time)
+            db_delta = timedelta(seconds=end_time-end_service_time)
+
+            logger.warn('Took {:.2f}s to process flight data [db={:.2f}s, service={:.2f}s] '
+                .format(execution_time.total_seconds(), db_delta.total_seconds(), service_delta.total_seconds()))
 
     def add_positions(self, positions):
         """ Inserts positions into the database"""
