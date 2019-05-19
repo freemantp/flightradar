@@ -39,7 +39,7 @@ class ModeSMixer(RadarService):
             else:
                 logger.error("[ModeSMixer] unexpected HTTP response: {:d}".format(res.code))
 
-        except (ConnectionRefusedError, OSError) as err:
+        except (ConnectionRefusedError, CannotSendRequest, OSError) as err:
             logger.error(err)
 
         return None
