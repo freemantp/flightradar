@@ -1,8 +1,9 @@
 import peewee as pw
+from peewee import SqliteDatabase
 import datetime
 from os import path
 
-from playhouse.sqliteq import SqliteQueueDatabase
+#from playhouse.sqliteq import SqliteDatabase
 
 database_proxy = pw.Proxy()
 
@@ -36,21 +37,23 @@ class Position(pw.Model):
 
 DB_MODEL_CLASSES = [Flight, Position]
 
-TRIGGER_CREATE = 'CREATE TRIGGER flight_timestmp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
+def init_schema(db):
 
-def init_db_schema(data_folder):
+    TRIGGER_CREATE = 'CREATE TRIGGER flight_timestmp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
 
-    position_db = SqliteQueueDatabase(
+    db.create_tables(DB_MODEL_CLASSES)
+    db.execute_sql(TRIGGER_CREATE)
+
+def init_db(data_folder):
+
+    position_db = SqliteDatabase(
         path.join(data_folder, 'flights.sqlite'),
-        use_gevent=False,  # Use the standard library "threading" module.
-        autostart=True,  # The worker thread now must be started manually.
-        queue_max_size=64,  # Max. # of pending writes that can accumulate.
-        results_timeout=5.0)  # Max. time to wait for query to be executed.
+        pragmas={
+            'journal_mode': 'wal',
+            'cache_size': -1024 * 32
+        })
+
 
     database_proxy.initialize(position_db)
-
-    # TODO: Really do this on startup??
-    position_db.create_tables(DB_MODEL_CLASSES) #init db
-    position_db.execute_sql(TRIGGER_CREATE)
 
     return position_db

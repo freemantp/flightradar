@@ -1,11 +1,10 @@
 from flask import Flask, Blueprint, g
+from click import get_current_context
 from os import path
-
-import atexit
 
 from .config import Config
 from .adsb.db.basestationdb import BaseStationDB
-from .adsb.db.dbmodels import init_db_schema
+from .adsb.db.dbmodels import init_db
 from .adsb.util.logging import init_logging
 from .scheduling import configure_scheduling
 
@@ -32,7 +31,7 @@ def create_app():
     app.config.from_object(conf)
     init_logging(conf.LOGGING_CONFIG)
 
-    app.flight_db = init_db_schema(conf.DATA_FOLDER)
+    app.flight_db = init_db(conf.DATA_FOLDER)
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
@@ -40,11 +39,9 @@ def create_app():
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint, url_prefix='/')
 
-    configure_scheduling(app, conf)
-
-    @atexit.register
-    def _stop_worker_threads():
-        app.flight_db.stop()
+    # Run asynchronous tasks only if in run mode
+    if get_current_context().info_name == 'run':
+        configure_scheduling(app, conf)
 
     return app
 

@@ -2,7 +2,6 @@ import logging
 import time
 from flask import Flask
 from flask_apscheduler import APScheduler
-from click import get_current_context
 from apscheduler.events import *
 from .config import Config
 from .adsb.flightupdater import FlightUpdater
@@ -38,10 +37,6 @@ def configure_scheduling(app: Flask, conf: Config):
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
 
-    # Run asynchronous tasks if not in shell mode
-    if get_current_context().info_name != 'shell':
-        app.apscheduler.start()
-
     @scheduler.task('interval', id=UPDATER_JOB_NAME, seconds=1, misfire_grace_time=3, coalesce=True)
     def update_flights():
 
@@ -52,3 +47,5 @@ def configure_scheduling(app: Flask, conf: Config):
     def crawl_airplanes():
         with app.app_context():
              time.sleep(25)
+
+    app.apscheduler.start()
