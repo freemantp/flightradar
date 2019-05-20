@@ -56,7 +56,10 @@ class FlightUpdater(object):
     def is_service_alive(self):
         return self._service.connection_alive
 
-    def cleanup_items(self): #TODO schedule this with APScheduler
+    def get_cached_flights(self):
+        return { k:self.flight_lastpos_map.get(v) for (k,v) in self.modeS_flight_map.items() if v in self.flight_lastpos_map }
+
+    def cleanup_items(self):
 
         if self._delete_after > 0:
             

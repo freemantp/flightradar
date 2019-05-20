@@ -32,8 +32,7 @@ def get_map(flight_id):
 
 @main.route("/map") 
 def get_map_all():
-    archived = get_boolean_arg('archived')
-    return render_template('map.html', archived=archived)
+    return render_template('live.html')
 
 @main.route("/archived") 
 def archived():
