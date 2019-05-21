@@ -62,14 +62,18 @@ class FlightUpdater(object):
         if self._delete_after > 0:
             
             delete_timestamp = datetime.utcnow() - timedelta(minutes=self._delete_after)
+            flights_to_delete = DBRepository.get_non_archived_flights_older_than(delete_timestamp)
 
-            with db.atomic() as transaction:            
-                for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
-                    DBRepository.delete_flight_and_positions(flight.id)
+            if flights_to_delete:
+                with db.atomic() as transaction:                
+                    DBRepository.delete_flights_and_positions([f.id for f in flights_to_delete])
+
+                for flight in flights_to_delete:                
                     self.modeS_flight_map.pop(flight.modeS, None)
                     self.flight_lastpos_map.pop(flight.id, None)
-                    logger.debug('Deleted flight {:s} (id={:d})'.format(
-                        str(flight.callsign), flight.id))
+
+                deleted_msg = ', '.join(['{:s} (id={:d})'.format(f.callsign, f.id) for f in flights_to_delete])
+                logger.info('Deleted {:s}'.format(deleted_msg))
 
     def _threshold_timestamp(self):
         return datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
@@ -184,7 +188,7 @@ class FlightUpdater(object):
                         self.modeS_flight_map[modeS_callsgn[0]] = flight_result[0].id
                     else:
                         self.insert_flight(modeS_callsgn)
-                        logger.info('inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else '', modeS_callsgn[0]))
+                        logger.info('Inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else '', modeS_callsgn[0]))
 
     def insert_flight(self, modeS_callsgn):
         flight_id = Flight.insert(modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()

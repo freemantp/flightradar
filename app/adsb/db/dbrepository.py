@@ -84,10 +84,11 @@ class DBRepository:
             
     @staticmethod
     def get_non_archived_flights_older_than(timestamp):
-            return Flight.select(Flight.modeS, Flight.id, Flight.callsign, Flight.last_contact).where((Flight.last_contact < timestamp) & (Flight.archived == False ))
+            return Flight.select(Flight.id, Flight.modeS, Flight.callsign).where((Flight.last_contact < timestamp) & (Flight.archived == False ))
                                                 
     @staticmethod
-    def delete_flight_and_positions(flight_id):
-        Position.delete().where(Position.flight_fk == flight_id).execute()
-        Flight.delete().where(Flight.id == flight_id).execute()
+    def delete_flights_and_positions(flight_ids: list):
+        assert(len(flight_ids) > 0)
+        Position.delete().where(Position.flight_fk << flight_ids).execute()
+        Flight.delete().where(Flight.id << flight_ids).execute()
 
