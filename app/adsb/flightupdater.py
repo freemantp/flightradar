@@ -60,7 +60,7 @@ class FlightUpdater(object):
     def cleanup_items(self):
 
         if self._delete_after > 0:
-            
+
             delete_timestamp = datetime.utcnow() - timedelta(minutes=self._delete_after)
             flights_to_delete = DBRepository.get_non_archived_flights_older_than(delete_timestamp)
 
@@ -72,8 +72,9 @@ class FlightUpdater(object):
                     self.modeS_flight_map.pop(flight.modeS, None)
                     self.flight_lastpos_map.pop(flight.id, None)
 
-                deleted_msg = ', '.join(['{:s} (id={:d})'.format(f.callsign, f.id) for f in flights_to_delete])
+                deleted_msg = ', '.join(['{:d} (cs={})'.format(f.id, f.callsign) for f in flights_to_delete])
                 logger.info('Deleted {:s}'.format(deleted_msg))
+
 
     def _threshold_timestamp(self):
         return datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
@@ -158,6 +159,9 @@ class FlightUpdater(object):
     def update_flights(self, flights):
         """ Inserts and updates  flights in the database"""
 
+        inserted_flights = []
+        updated_flights = []
+
         with db.atomic() as transaction:
 
             # (modeS, callsign), None for a callsign is allowed
@@ -174,9 +178,9 @@ class FlightUpdater(object):
                     if flight_result:
                         if modeS_callsgn[1]:
                             self.update_callsign(modeS_callsgn[1], flight_result[0].id)
-                            logger.info('updated callsign: modeS:{} -> {}'.format(modeS_callsgn[0], modeS_callsgn[1]))
+                            updated_flights.append(modeS_callsgn)                            
                     else:
-                        logger.warn('should not happen: {}'.format(str(modeS_callsgn)))
+                        logger.warn('Not inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else '', modeS_callsgn[0]))
                         #self.insert_flight(modeS_callsgn)
 
                 else:
@@ -188,7 +192,15 @@ class FlightUpdater(object):
                         self.modeS_flight_map[modeS_callsgn[0]] = flight_result[0].id
                     else:
                         self.insert_flight(modeS_callsgn)
-                        logger.info('Inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else '', modeS_callsgn[0]))
+                        inserted_flights.append(modeS_callsgn)
+
+        if inserted_flights:
+            inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in inserted_flights])
+            logger.info('Inserted {:s}'.format(inserted_msg))
+
+        if updated_flights:
+            inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in updated_flights])
+            logger.info('Updated {:s}'.format(inserted_msg))
 
     def insert_flight(self, modeS_callsgn):
         flight_id = Flight.insert(modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()
