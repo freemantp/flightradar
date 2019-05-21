@@ -1,7 +1,7 @@
-from time import sleep
-from  datetime import datetime, timedelta
 import logging
 
+from time import sleep
+from datetime import datetime, timedelta
 from timeit import default_timer as timer
 
 from ..util.singleton import Singleton
@@ -9,11 +9,9 @@ from ..util.singleton import Singleton
 from .datasource.modesmixer import ModeSMixer
 from .datasource.virtualradarserver import VirtualRadarServer
 from .util.modes_util import ModesUtil
-from .db.dbmodels import Position, Flight
+from .db.dbmodels import Position, Flight, database_proxy as db
 from .db.dbrepository import DBRepository
 from ..config import Config
-
-from flask import current_app
 
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
@@ -65,7 +63,7 @@ class FlightUpdater(object):
             
             delete_timestamp = datetime.utcnow() - timedelta(minutes=self._delete_after)
 
-            with current_app.flight_db.atomic() as transaction:            
+            with db.atomic() as transaction:            
                 for flight in DBRepository.get_non_archived_flights_older_than(delete_timestamp):
                     DBRepository.delete_flight_and_positions(flight.id)
                     self.modeS_flight_map.pop(flight.modeS, None)
@@ -148,7 +146,7 @@ class FlightUpdater(object):
             fields = [Position.flight_fk, Position.lat,
                       Position.lon, Position.alt]
 
-            with current_app.flight_db.atomic() as transaction:
+            with db.atomic() as transaction:
                 for i in range(0, len(db_tuples), self._insert_batch_size):
                     Position.insert_many(
                         db_tuples[i:i+self._insert_batch_size], fields=fields).execute()
@@ -156,7 +154,7 @@ class FlightUpdater(object):
     def update_flights(self, flights):
         """ Inserts and updates  flights in the database"""
 
-        with current_app.flight_db.atomic() as transaction:
+        with db.atomic() as transaction:
 
             # (modeS, callsign), None for a callsign is allowed
             for modeS_callsgn in  [(f[0], f[4]) for f in flights]:

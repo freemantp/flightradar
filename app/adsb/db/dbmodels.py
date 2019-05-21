@@ -1,32 +1,32 @@
-import peewee as pw
-from peewee import SqliteDatabase
+from peewee import SqliteDatabase, Model, DatabaseProxy
+from peewee import AutoField, CharField, FixedCharField, FloatField
+from peewee import BooleanField, DateTimeField, IntegerField, ForeignKeyField
 import datetime
 from os import path
 
-#from playhouse.sqliteq import SqliteDatabase
+database_proxy = DatabaseProxy()
 
-database_proxy = pw.Proxy()
-
-class Flight(pw.Model):
-    id = pw.AutoField
-    callsign = pw.CharField(null = True)
-    modeS = pw.FixedCharField(max_length=6, index=True)
-    archived = pw.BooleanField(default=False)
-    first_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
-    last_contact = pw.DateTimeField(default=datetime.datetime.utcnow)
-
+class BaseModel(Model):
     class Meta:
         database = database_proxy
+
+class Flight(BaseModel):
+    id = AutoField
+    callsign = CharField(null = True)
+    modeS = FixedCharField(max_length=6, index=True)
+    archived = BooleanField(default=False)
+    first_contact = DateTimeField(default=datetime.datetime.utcnow)
+    last_contact = DateTimeField(default=datetime.datetime.utcnow)
 
     def __str__(self):
         return 'Flight id={:d}, callsign={:s}, modeS={:s}, archived={:s}, last_contact={:s}'.format( self.id, str(self.callsign), str(self.modeS), str(self.archived), str(self.last_contact) )
 
-class Position(pw.Model):
-    flight_fk = pw.ForeignKeyField(Flight, backref='positions')
-    lat = pw.FloatField()
-    lon = pw.FloatField()   
-    alt = pw.IntegerField(null=True)
-    timestmp = pw.DateTimeField(default=datetime.datetime.utcnow)
+class Position(BaseModel):
+    flight_fk = ForeignKeyField(Flight, backref='positions')
+    lat = FloatField()
+    lon = FloatField()   
+    alt = IntegerField(null=True)
+    timestmp = DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         database = database_proxy
