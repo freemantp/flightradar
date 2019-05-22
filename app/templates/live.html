@@ -378,6 +378,13 @@
               markers[modes] = create_marker(modes, data[modes][0])
             } 
 
+            for (modeS in markers) {
+              if (!(modeS in data) ) {
+                markers[modeS].setMap(null);
+                delete markers[modeS]
+              }
+            }
+
             plane_data = data[modes];
             markers[modes].setPosition({ lat: Number(plane_data[1]), lng: Number(plane_data[2]) })      
           }

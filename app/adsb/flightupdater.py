@@ -49,13 +49,19 @@ class FlightUpdater(object):
         # Lookup stuctures
         self.modeS_flight_map = dict()
         self.flight_lastpos_map = dict()
+        self.flight_last_contact = dict()
         self._initialize_from_db()
 
     def is_service_alive(self):
         return self._service.connection_alive
 
     def get_cached_flights(self):
-        return { k:self.flight_lastpos_map.get(v) for (k,v) in self.modeS_flight_map.items() if v in self.flight_lastpos_map }
+
+        timestamp = datetime.utcnow() - timedelta(minutes=1)
+
+        return { k:self.flight_lastpos_map.get(v) 
+                    for (k,v) in self.modeS_flight_map.items() 
+                    if v in self.flight_lastpos_map and self.flight_last_contact[v] > timestamp }
 
     def cleanup_items(self):
 
@@ -68,24 +74,26 @@ class FlightUpdater(object):
                 with db.atomic() as transaction:                
                     DBRepository.delete_flights_and_positions([f.id for f in flights_to_delete])
 
-                for flight in flights_to_delete:                
+                for flight in flights_to_delete:
                     self.modeS_flight_map.pop(flight.modeS, None)
                     self.flight_lastpos_map.pop(flight.id, None)
-
+                    self.flight_last_contact.pop(flight.id, None)
                 deleted_msg = ', '.join(['{:d} (cs={})'.format(f.id, f.callsign) for f in flights_to_delete])
                 logger.info('Deleted {:s}'.format(deleted_msg))
-
 
     def _threshold_timestamp(self):
         return datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
 
     def _initialize_from_db(self):
 
+        """ Initializes cache from database """
+
         recent_flight_timestamp = datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
         
         for pos_flights in DBRepository.get_recent_flights_last_pos(recent_flight_timestamp):
             self.modeS_flight_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id
             self.flight_lastpos_map[pos_flights.flight_fk.id] = (pos_flights.flight_fk.id, pos_flights.lat, pos_flights.lon, pos_flights.alt )
+            self.flight_last_contact[pos_flights.flight_fk.id] = pos_flights.flight_fk.last_contact
 
     def update(self):
 
@@ -98,7 +106,7 @@ class FlightUpdater(object):
         try:
             if positions:
 
-                # Filter for military icaos
+                # Filter for military modeS
                 filtered_pos = [pos for pos in positions if self._mil_ranges.is_military(
                     pos[0])] if self._mil_only else positions
 
@@ -145,6 +153,7 @@ class FlightUpdater(object):
 
         for tpl in db_tuples:
             self.flight_lastpos_map[tpl[0]] = tpl
+            self.flight_last_contact[tpl[0]] = datetime.utcnow()
 
         # Insert new
         if db_tuples:
@@ -165,34 +174,25 @@ class FlightUpdater(object):
         with db.atomic() as transaction:
 
             # (modeS, callsign), None for a callsign is allowed
-            for modeS_callsgn in  [(f[0], f[4]) for f in flights]:
+            for modeS_callsgn in [(f[0], f[4]) for f in flights]:
 
                 # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
                 thresh_timestmp = self._threshold_timestamp()
 
-                if modeS_callsgn[0] in self.modeS_flight_map:
+                flight_result = (Flight.select(Flight.id)
+                                .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
 
-                    flight_result = (Flight.select(Flight.id)
-                                    .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
+                if flight_result:
+                    if modeS_callsgn[1]:
+                        self.update_callsign(modeS_callsgn[1], flight_result[0].id)
+                        updated_flights.append(modeS_callsgn)
 
-                    if flight_result:
-                        if modeS_callsgn[1]:
-                            self.update_callsign(modeS_callsgn[1], flight_result[0].id)
-                            updated_flights.append(modeS_callsgn)                            
-                    else:
-                        logger.warn('Not inserted {} ({})'.format(modeS_callsgn[1] if modeS_callsgn[1] else '', modeS_callsgn[0]))
-                        #self.insert_flight(modeS_callsgn)
-
+                    if not modeS_callsgn[0] in self.modeS_flight_map:
+                         self.modeS_flight_map[modeS_callsgn[0]] = flight_result[0].id
                 else:
-
-                    flight_result = (Flight.select(Flight.id)
-                                    .where(Flight.modeS == modeS_callsgn[0], Flight.callsign == modeS_callsgn[1], Flight.last_contact > thresh_timestmp))
-                    if flight_result:
-                        # just update map if recent flight present in db
-                        self.modeS_flight_map[modeS_callsgn[0]] = flight_result[0].id
-                    else:
-                        self.insert_flight(modeS_callsgn)
-                        inserted_flights.append(modeS_callsgn)
+                    self.insert_flight(modeS_callsgn)
+                    inserted_flights.append(modeS_callsgn)
+                    
 
         if inserted_flights:
             inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in inserted_flights])
