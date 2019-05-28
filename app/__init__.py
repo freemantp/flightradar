@@ -40,7 +40,8 @@ def create_app():
     app.register_blueprint(main_blueprint, url_prefix='/')
 
     # Run asynchronous tasks only if in run mode
-    if get_current_context().info_name == 'run':
+    click_ctx = get_current_context(True)
+    if not click_ctx or (click_ctx and click_ctx.info_name == 'run'):
         configure_scheduling(app, conf)
 
     return app
