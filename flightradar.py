@@ -1,13 +1,12 @@
 from app import create_app
 
 app = create_app()
-
-@app.cli.command('init-schema')
-def init_db_schema():
+@app.cli.command()
+def initschema():
     """Initialize DB schema."""
 
-    from .app.adsb.db.dbmodels import init_schema, init_db
-    from .app.config import Config
+    from app.adsb.db.dbmodels import init_schema, init_db
+    from app.config import Config
 
     conf = Config() 
     db = init_db(conf.DATA_FOLDER)
@@ -16,6 +15,6 @@ def init_db_schema():
 @app.shell_context_processor
 def make_shel_context():
 
-    from .app.adsb.db.dbmodels import Flight, Position
-    from .app.adsb.db.dbrepository import DBRepository
+    from app.adsb.db.dbmodels import Flight, Position
+    from app.adsb.db.dbrepository import DBRepository
     return dict(db=app.flight_db, Flight=Flight, Position=Position, DBRepository=DBRepository)

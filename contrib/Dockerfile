@@ -1,8 +1,0 @@
-# python:alpine is 3.{latest} 
-FROM python:alpine 
-LABEL maintainer="Michael Morandi"
-RUN pip install -r requirements.txt
-COPY . /src
-WORKDIR /src
-EXPOSE 5000 
-ENTRYPOINT ["python", "web.py"]

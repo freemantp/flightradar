@@ -11,3 +11,4 @@ pytz==2018.9
 six==1.12.0
 soupsieve==1.9
 Werkzeug==0.14.1
+gunicorn==19.9.0
