@@ -22,9 +22,10 @@ RUN venv/bin/pip install -r requirements.txt
 COPY app app
 RUN mkdir resources
 COPY resources/mil_ranges.csv resources/
+COPY resources/meta.json resources/
 COPY flightradar.py config.json ./
 COPY --chown=radar resources/BaseStation.sqb resources/
-COPY --chown=radar start.sh ./
+COPY --chown=radar contrib/start.sh ./
 
 # prepare dbs
 ENV FLASK_APP flightradar.py

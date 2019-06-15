@@ -3,6 +3,7 @@ from click import get_current_context
 from os import path
 
 from .config import Config
+from .meta import MetaInformation
 from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db
 from .adsb.util.logging import init_logging
@@ -30,6 +31,8 @@ def create_app():
     conf = Config() 
     app.config.from_object(conf)
     init_logging(conf.LOGGING_CONFIG)
+
+    app.metaInfo = MetaInformation()
 
     app.flight_db = init_db(conf.DATA_FOLDER)
 

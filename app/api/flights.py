@@ -6,6 +6,10 @@ from .. exceptions import ValidationError
 
 from flask import current_app as app, Response, request, jsonify, abort
 
+@api.route('/info')
+def get_meta_info():
+    return jsonify(app.metaInfo.__dict__)
+
 @api.route('/positions/live')
 def get_live_positions():
     return jsonify(app.updater.get_cached_flights())
