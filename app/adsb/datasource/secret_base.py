@@ -1,9 +1,9 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
-from socket import error as SocketError
 import json
 import time
 import logging
 import ssl
+import requests
+from requests.exceptions import HTTPError
 
 from bs4 import BeautifulSoup
 
@@ -11,7 +11,6 @@ from ..aircraft import Aircraft
 from ..util.modes_util import ModesUtil
 
 logger = logging.getLogger('SecretBasesUk')
-
 
 class SecretBasesUk:
 
@@ -45,55 +44,45 @@ class SecretBasesUk:
         """ queries aircraft data """
 
         try:
-            
-            conn = HTTPSConnection("www.secret-bases.co.uk")
-            conn.request('GET', '/aircraft/{:s}'.format(mode_s_hex), headers=self.headers)
 
-            res = conn.getresponse()
-            if res.status == 200:
+            url = 'https://www.secret-bases.co.uk/aircraft/{:s}'.format(mode_s_hex)
+            response = requests.get(url, headers=self.headers)            
+            response.raise_for_status()
 
-                data = res.read().decode()
-                soup = BeautifulSoup(data, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-                aircraft = Aircraft(mode_s_hex)
-                raw_line =  str(soup.body.h1).replace('</h1>', '', 1).replace('<h1>', '', 1)
+            aircraft = Aircraft(mode_s_hex)
+            raw_line =  str(soup.body.h1).replace('</h1>', '', 1).replace('<h1>', '', 1)
 
-                named_fields = dict()
-                unnamed_fields = []
+            named_fields = dict()
+            unnamed_fields = []
 
-                for field in raw_line.split('<br/>'):
-                    if ':' in field:
-                        elements = field.split(':')
-                        value = elements[1].strip()
-                        named_fields[elements[0]] = value if value else None
-                    else:
-                        unnamed_fields.append(field.strip())
-
-                if self.ICAO_TYPE_FIELD in named_fields:
-                    aircraft.type1 = named_fields[self.ICAO_TYPE_FIELD]
-                if self.REGISTRATION_FIELD in named_fields:
-                    aircraft.reg = named_fields[self.REGISTRATION_FIELD]
-
-                if len(unnamed_fields) == 3:
-                    aircraft.operator = unnamed_fields[1]
-                    aircraft.type2 = unnamed_fields[2]
-                elif len(unnamed_fields) == 2:
-                    aircraft.type2 = unnamed_fields[1]
+            for field in raw_line.split('<br/>'):
+                if ':' in field:
+                    elements = field.split(':')
+                    value = elements[1].strip()
+                    named_fields[elements[0]] = value if value else None
                 else:
-                    logger.error('Could not parse Fields')
-                    return None
+                    unnamed_fields.append(field.strip())
 
-                return aircraft
+            if self.ICAO_TYPE_FIELD in named_fields:
+                aircraft.type1 = named_fields[self.ICAO_TYPE_FIELD]
+            if self.REGISTRATION_FIELD in named_fields:
+                aircraft.reg = named_fields[self.REGISTRATION_FIELD]
 
-            elif res.status == 404:                    
-                return None
-            elif res.status == 301:                    
-                return None            
+            if len(unnamed_fields) == 3:
+                aircraft.operator = unnamed_fields[1]
+                aircraft.type2 = unnamed_fields[2]
+            elif len(unnamed_fields) == 2:
+                aircraft.type2 = unnamed_fields[1]
             else:
-                res.read()
-                logger.error('Unexpected http code {:d}'.format(res.status))
-        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
-            logger.exception(ex)
+                logger.error('Could not parse Fields')
+                return None
+
+            return aircraft
+
+        except HTTPError as http_err:
+            logger.exception(http_err)
         except (KeyboardInterrupt, SystemExit):
             raise            
         except:

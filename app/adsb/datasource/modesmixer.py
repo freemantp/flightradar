@@ -15,17 +15,26 @@ class ModeSMixer(RadarService):
         RadarService.__init__(self, url)
 
         self.headers['Content-type'] = 'application/json'
-        self.body = '{{"req":"getStats","data":{{"statsType":"flights","id":{0}}}}}'
         self.epoch = 0
         self.session = requests.Session()
 
-    def get_request_body(self):
-        return self.body % self.epoch
+    def _get_request_body(self, force_initial):
+
+        if force_initial:
+            self.epoch = 0
+
+        return {
+            "req": "getStats",
+            "data": {
+                "statsType": "flights", 
+                "id": (0 if force_initial else self.epoch)
+            }
+        }
 
     def get_flight_info(self, force_initial=False):
 
         try:
-            msg_body = self.body.format(0 if force_initial else self.epoch)
+            msg_body = self._get_request_body(force_initial)
 
             url = RadarService._urljoin(self.base_path, 'json')
             response = self.session.post(url, json=msg_body, headers=self.headers)

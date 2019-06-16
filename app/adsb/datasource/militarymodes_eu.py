@@ -1,9 +1,8 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
-from socket import error as SocketError
-import json
 import time
 import logging
 import ssl
+import requests
+from requests.exceptions import HTTPError
 
 from bs4 import BeautifulSoup
 
@@ -67,40 +66,32 @@ class MilitaryModeS:
         """ queries aircraft data """
 
         try:
-            
-            conn = HTTPSConnection("www.live-military-mode-s.eu")
-            conn.request('GET', '/military mode-s database/search/searchMilHex.php?Code={:s}&submit4=Search'.format(mode_s_hex), headers=self.headers)
 
-            res = conn.getresponse()
-            if res.status == 200:
+            url = 'https://www.live-military-mode-s.eu/military mode-s database/search/searchMilHex.php?Code={:s}&submit4=Search'.format(mode_s_hex)
+            response = requests.get(url, headers=self.headers)            
+            response.raise_for_status()
 
-                data = res.read().decode()
-                soup = BeautifulSoup(data, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-                aircraft = Aircraft(mode_s_hex)
+            aircraft = Aircraft(mode_s_hex)
 
-                index = 0
-                for td in soup.table.find_all('td', width='40%'):
+            index = 0
+            for td in soup.table.find_all('td', width='40%'):
 
-                    if index == 0:
-                        aircraft.reg = td.text if td.text else None
-                    elif index == 2:
-                        aircraft.type2 = td.text if td.text else None
-                    elif index == 4:
-                        aircraft.operator = td.text if td.text else None
+                if index == 0:
+                    aircraft.reg = td.text if td.text else None
+                elif index == 2:
+                    aircraft.type2 = td.text if td.text else None
+                elif index == 4:
+                    aircraft.operator = td.text if td.text else None
 
-                    index = index + 1
+                index = index + 1
 
-                self.sanitize_known_issues(aircraft)
-                return aircraft
+            self.sanitize_known_issues(aircraft)
+            return aircraft
 
-            elif res.status == 404:                    
-                return None
-            else:
-                res.read()
-                logger.error('Unexpected http code {:d}'.format(res.status))
-        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
-            logger.exception(ex)
+        except HTTPError as http_err:
+            logger.exception(http_err)
         except (KeyboardInterrupt, SystemExit):
             raise            
         except:

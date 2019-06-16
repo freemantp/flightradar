@@ -1,10 +1,9 @@
-from http.client import HTTPConnection, RemoteDisconnected, IncompleteRead
-from socket import error as SocketError
-import json
 import time
 import logging
 import ssl
 import re
+import requests
+from requests.exceptions import HTTPError
 from bs4 import BeautifulSoup
 
 from ..aircraft import Aircraft
@@ -52,48 +51,44 @@ class AdsbNL:
         """ queries aircraft data """
 
         try:
-            conn = HTTPConnection('www.ads-b.nl')
-            conn.request('GET', '/aircraft.php?id_aircraft={:d}'.format(int(mode_s_hex, 16)), headers=self.headers)
-            res = conn.getresponse()
-            if res.status == 200:
+            url = 'http://www.ads-b.nl/aircraft.php?id_aircraft={:d}'.format(int(mode_s_hex, 16))
 
-                data = res.read().decode()
-                soup = BeautifulSoup(data, 'html.parser')
+            response = requests.get(url, headers=self.headers)            
+            response.raise_for_status()
 
-                keys = []
-                values = []
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-                index = 0
-                for sib in soup.body.find('div', text='Registration: ').parent:
-                    if sib.name == 'div':
-                        
-                        (keys if (index % 2 == 0) else values).append(sib.string.strip())
-                        index = index + 1
+            keys = []
+            values = []
 
-                if len(keys) == len(values) and len(keys) == 7:
+            index = 0
+            for sib in soup.body.find('div', text='Registration: ').parent:
+                if sib.name == 'div':
+                    
+                    (keys if (index % 2 == 0) else values).append(sib.string.strip())
+                    index = index + 1
 
-                    modeS_tuple = AdsbNL.split_parenthesis(values[3])
-                    if modeS_tuple:
-                        modeS = modeS_tuple[0]
-                    else:
-                        return None
+            if len(keys) == len(values) and len(keys) == 7:
 
-                    type_tuple = AdsbNL.split_parenthesis(values[1])
-                    if type_tuple:
-                        icaoType = type_tuple[0]
-                        full_type = type_tuple[1]
-                    else:
-                        return None                
+                modeS_tuple = AdsbNL.split_parenthesis(values[3])
+                if modeS_tuple:
+                    modeS = modeS_tuple[0]
+                else:
+                    return None
 
-                    reg = values[0]
+                type_tuple = AdsbNL.split_parenthesis(values[1])
+                if type_tuple:
+                    icaoType = type_tuple[0]
+                    full_type = type_tuple[1]
+                else:
+                    return None                
 
-                    return Aircraft(modeS,reg,icaoType,full_type)
-            else:
-                res.read()
-                raise ValueError('Unexpected http code: %s' % res.status)
+                reg = values[0]
 
-        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
-            logger.exception(ex)
+                return Aircraft(modeS,reg,icaoType,full_type)
+
+        except HTTPError as http_err:
+            logger.exception(http_err)
         except (KeyboardInterrupt, SystemExit):
             raise
         except:

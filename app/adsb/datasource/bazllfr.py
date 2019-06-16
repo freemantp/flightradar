@@ -1,9 +1,8 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
-from socket import error as SocketError
-import json
 import time
 import logging
 import ssl
+import requests
+from requests.exceptions import HTTPError
 
 from ..aircraft import Aircraft
 from ..util.modes_util import ModesUtil
@@ -62,47 +61,42 @@ class BazlLFR:
                 'sort_list': 'registration'
             }
 
-            conn = HTTPSConnection("app02.bazl.admin.ch", context=ssl._create_unverified_context())
-            conn.request('POST', "/web/bazl-backend/lfr",
-                              body=json.dumps(post_body), headers=self.headers)
-            res = conn.getresponse()
-            if res.status == 200:
+            url = 'https://app02.bazl.admin.ch/web/bazl-backend/lfr'.format(mode_s_hex)
+            response = requests.post(url, json=post_body, headers=self.headers)            
+            response.raise_for_status()
 
-                response_body = json.loads(res.read().decode())
+            response_body = response.json()
 
-                if response_body:
-                    aircraft = response_body[0]
-                    reg = aircraft['registration']
-                    type1 = aircraft['icaoCode']
+            if response_body:
+                aircraft = response_body[0]
+                reg = aircraft['registration']
+                type1 = aircraft['icaoCode']
 
-                    manufacturer = aircraft['manufacturer'] \
-                        if aircraft['manufacturer'] not in self.known_replacements \
-                        else self.known_replacements[aircraft['manufacturer']]
+                manufacturer = aircraft['manufacturer'] \
+                    if aircraft['manufacturer'] not in self.known_replacements \
+                    else self.known_replacements[aircraft['manufacturer']]
 
-                    model = aircraft['aircraftModelType']
-                    marketing_desc = aircraft['details']['marketing']
+                model = aircraft['aircraftModelType']
+                marketing_desc = aircraft['details']['marketing']
 
-                    for op in aircraft['ownerOperators']:
-                        if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
-                            operator = op['ownerOperator']
+                for op in aircraft['ownerOperators']:
+                    if 'Haupthalter' in op['holderCategory']['categoryNames']['de']:
+                        operator = op['ownerOperator']
 
-                    # Sanitize strings
-                    manufacturer = manufacturer.title() if manufacturer.isupper() else manufacturer
-                    operator = operator.title() if operator.isupper() else operator
-                    model = model.title() if model.isupper() else model
-                    marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
-                    marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc
+                # Sanitize strings
+                manufacturer = manufacturer.title() if manufacturer.isupper() else manufacturer
+                operator = operator.title() if operator.isupper() else operator
+                model = model.title() if model.isupper() else model
+                marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
+                marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc
 
-                    type2 = '{:s} {:s}'.format(manufacturer, model)
-                    type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
+                type2 = '{:s} {:s}'.format(manufacturer, model)
+                type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
 
-                    return Aircraft(mode_s_hex, reg, type1, type2, operator)
-            else:
-                res.read()
-                raise ValueError('Unexpected http code {:s}'.format(res.status))
+                return Aircraft(mode_s_hex, reg, type1, type2, operator)
                 
-        except (RemoteDisconnected, IncompleteRead, SocketError) as ex:
-            logger.exception(ex)
+        except HTTPError as http_err:
+            logger.exception(http_err)
         except (KeyboardInterrupt, SystemExit):
             raise            
         except:

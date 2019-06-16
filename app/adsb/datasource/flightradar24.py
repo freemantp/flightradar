@@ -1,5 +1,5 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead, CannotSendRequest
-import json
+import requests
+from requests.exceptions import HTTPError
 import time
 import logging
 
@@ -13,7 +13,6 @@ class Flightradar24:
 
     def __init__(self):
 
-        self.conn = HTTPSConnection("api.flightradar24.com")
         self.headers = {
             'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0',
             "Content-type": "application/json",
@@ -55,22 +54,24 @@ class Flightradar24:
         self.failcounter = 0
         while self.failcounter < self.maxretires:
             try:
-                self.conn.request('GET', "/common/v1/search.json?fetchBy=reg&query=%s" % mode_s_hex, headers=self.headers)
-                res = self.conn.getresponse()
-                if res.status == 200:
 
-                    json_obj = json.loads(res.read().decode())
+                url = 'https://api.flightradar24.com/common/v1/search.json?fetchBy=reg&query={:s}'.format(mode_s_hex)
+                response = requests.get(url, headers=self.headers)            
+                response.raise_for_status()
 
-                    if json_obj['result']['response']['aircraft']['data']:
-                        aircraft = json_obj['result']['response']['aircraft']['data'][0]
-                        reg = aircraft['registration']
-                        type1 = aircraft['model']['code']
-                        type2 = aircraft['model']['text']
-                        if aircraft['airline']:
-                            operator = aircraft['airline']['name']
-                        else:
-                            operator = None
-                        return Aircraft(mode_s_hex, reg, type1, type2, operator)
+
+                json_obj = response.json()
+
+                if json_obj['result']['response']['aircraft']['data']:
+                    aircraft = json_obj['result']['response']['aircraft']['data'][0]
+                    reg = aircraft['registration']
+                    type1 = aircraft['model']['code']
+                    type2 = aircraft['model']['text']
+                    if aircraft['airline']:
+                        operator = aircraft['airline']['name']
+                    else:
+                        operator = None
+                    return Aircraft(mode_s_hex, reg, type1, type2, operator)
 
                 elif res.status == 402:                    
                     res.read()
@@ -82,9 +83,14 @@ class Flightradar24:
                 else:
                     res.read()
                     raise ValueError('Unexpected http code: %s' % res.status)
-            except (RemoteDisconnected, IncompleteRead, ConnectionError, CannotSendRequest) as e:                             
-                logger.error(e)
-                self._fail_and_sleep() 
+
+            except HTTPError as http_err:
+
+                if http_err.response.status_code == requests.codes.payment:
+                    logger.warn('HTTP 402 - Payment Required')            
+                else:
+                    logger.exception(http_err)
+                self._fail_and_sleep()
             except (KeyboardInterrupt, SystemExit):
                 raise                
             except:

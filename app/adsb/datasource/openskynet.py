@@ -1,6 +1,5 @@
-from http.client import HTTPSConnection, RemoteDisconnected, IncompleteRead
-from socket import error as SocketError
-import json
+import requests
+from requests.exceptions import HTTPError
 import time
 import logging
 import ssl
@@ -38,37 +37,31 @@ class OpenskyNet:
 
         try:
             
-            conn = HTTPSConnection("opensky-network.org")
-            conn.request('GET', '/api/metadata/aircraft/icao/{:s}'.format(mode_s_hex), headers=self.headers)
+            url = 'https://opensky-network.org/api/metadata/aircraft/icao/{:s}'.format(mode_s_hex)
+            response = requests.get(url, headers=self.headers)            
+            response.raise_for_status()
 
-            res = conn.getresponse()
-            if res.status == 200:
+            aircraft = response.json()
 
-                aircraft = json.loads(res.read().decode())
+            if aircraft:
+                modeS = aircraft['icao24'].upper()
+                reg = aircraft['registration']
+                type1 = aircraft['typecode']
+                op = aircraft['operator']
 
-                if aircraft:
-                    modeS = aircraft['icao24'].upper()
-                    reg = aircraft['registration']
-                    type1 = aircraft['typecode']
-                    op = aircraft['operator']
+                type2 = (aircraft['model'] 
+                            if aircraft['model'].startswith(aircraft['manufacturerName']) 
+                            else  '{:s} {:s}'.format(aircraft['manufacturerName'], aircraft['model']) )
 
-                    type2 = (aircraft['model'] 
-                                if aircraft['model'].startswith(aircraft['manufacturerName']) 
-                                else  '{:s} {:s}'.format(aircraft['manufacturerName'], aircraft['model']) )
+                if modeS and reg and type1 and aircraft['model']:
+                    return Aircraft(modeS, reg, type1, type2, op)
 
-                    if modeS and reg and type1 and aircraft['model']:
-                        return Aircraft(modeS, reg, type1, type2, op)
-            elif res.status == 404:                    
-                return None
-            else:
-                res.read()
-                logger.error('Unexpected http code {:d}'.format(res.status))
-        except RemoteDisconnected:
-            logger.exception("RemoteDisconnected")
-        except IncompleteRead:
-            logger.exception("IncompleteRead")
-        except SocketError :
-            logger.exception("SocketError")
+        except HTTPError as http_err:
+            logger.exception(http_err)
+        except (KeyboardInterrupt, SystemExit):
+            raise            
+        except:
+            logger.exception('An unexpected error occured')
 
 
         return None
