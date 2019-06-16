@@ -1,6 +1,8 @@
 from .radarservice import RadarService
 import json
 import logging
+import requests
+from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +15,9 @@ class ModeSMixer(RadarService):
         RadarService.__init__(self, url)
 
         self.headers['Content-type'] = 'application/json'
-        self.body = """{"req":"getStats","data":{"statsType":"flights","id":%s}}"""
+        self.body = '{{"req":"getStats","data":{{"statsType":"flights","id":{0}}}}}'
         self.epoch = 0
-        self.conn = self.get_connection()
+        self.session = requests.Session()
 
     def get_request_body(self):
         return self.body % self.epoch
@@ -23,24 +25,20 @@ class ModeSMixer(RadarService):
     def get_flight_info(self, force_initial=False):
 
         try:
-            msg_body = self.body % (0 if force_initial else self.epoch)
+            msg_body = self.body.format(0 if force_initial else self.epoch)
 
-            self.conn.request('POST', self._url_parms.path +
-                         '/json', body=msg_body, headers=self.headers)
-            res = self.conn.getresponse()
-            data = res.read()
+            url = RadarService._urljoin(self.base_path, 'json')
+            response = self.session.post(url, json=msg_body, headers=self.headers)
+            response.raise_for_status()
 
-            if res.code == 200:
-                json_obj = json.loads(data.decode())
-                flights = json_obj['stats']['flights']
-                self.epoch = json_obj['stats']['epoch']
-                self.connection_alive = True
-                return flights
-            else:
-                logger.error("[ModeSMixer] unexpected HTTP response: {:d}".format(res.code))
+            json_obj = response.json()
+            flights = json_obj['stats']['flights']
+            self.epoch = json_obj['stats']['epoch']
+            self.connection_alive = True
+            return flights
 
-        except (ConnectionRefusedError, OSError) as err:
-            logger.error(err)
+        except HTTPError as http_err:
+            logger.error("[ModeSMixer]: {:s}".format(str(http_err)))
 
         return None
 
@@ -91,9 +89,6 @@ class ModeSMixer(RadarService):
             return flights
         else:
             return None
-
-    #def query_callsign(self, modeS):
-
 
     def get_silhouete_params(self):
         return {

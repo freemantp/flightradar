@@ -6,8 +6,13 @@ class RadarService:
 
     def __init__(self, url):
         
-        self._url_parms = urlparse(url)        
-        
+        self._url_parms = urlparse(url)
+
+        self.base_path = '{:s}://{:s}{:s}'.format(
+            self._url_parms.scheme, 
+            self._url_parms.hostname + (self._url_parms.port if self._url_parms.port else ""), 
+            self._url_parms.path)
+            
         self.headers = {
             'Accept' : 'application/json'
         }
@@ -18,6 +23,7 @@ class RadarService:
 
         self.connection_alive = True
 
+    #deprecated
     def get_connection(self):
         if self._url_parms.scheme == 'http':
             return HTTPConnection(self._url_parms.hostname,self._url_parms.port)
@@ -25,3 +31,12 @@ class RadarService:
             return HTTPSConnection(self._url_parms.hostname,self._url_parms.port)
         else:
             raise ValueError('Invalid protocol in service url')
+
+    @staticmethod
+    def _urljoin(*args):
+        """
+        Joins given arguments into an url. Trailing but not leading slashes are
+        stripped for each argument.
+        """
+
+        return "/".join(map(lambda x: str(x).rstrip('/'), args))            
