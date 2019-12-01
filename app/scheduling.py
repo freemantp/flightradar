@@ -46,6 +46,6 @@ def configure_scheduling(app: Flask, conf: Config):
     @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
     def crawl_airplanes():
         with app.app_context():
-             time.sleep(25)
+            app.crawler.crawl_sources()
 
     app.apscheduler.start()
