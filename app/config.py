@@ -34,7 +34,6 @@ class LoggingConfig:
         self.logLevel = logLevel
         self.logToConsole = logToConsole
 
-
 class Config:
 
     """ Application configuration """
@@ -45,6 +44,7 @@ class Config:
     MILTARY_ONLY = False
     DB_RETENTION_MIN = 1440
     LOGGING_CONFIG = None
+    UNKNOWN_AIRCRAFT_CRAWLING = False
 
     def __init__(self):
 
@@ -69,6 +69,7 @@ class Config:
         ENV_RADAR_SERVICE_TYPE = 'SERVICE_TYPE'
         ENV_MIL_ONLY = 'MIL_ONLY'
         ENV_DB_RETENTION_MIN = 'DB_RETENTION_MIN'
+        ENV_UNKNOWN_AIRCRAFT_CRAWLING = 'UNKNOWN_AIRCRAFT_CRAWLING'
 
         if os.environ.get(ENV_DATA_FOLDER):
             self.DATA_FOLDER = os.environ.get(ENV_DATA_FOLDER)
@@ -78,6 +79,8 @@ class Config:
             self.RADAR_SERVICE_TYPE = os.environ.get(ENV_RADAR_SERVICE_TYPE)
         if os.environ.get(ENV_MIL_ONLY):
             self.MILTARY_ONLY = str2bool(os.environ.get(ENV_MIL_ONLY))
+        if os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING):
+            self.UNKNOWN_AIRCRAFT_CRAWLING = str2bool(os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING))            
         if os.environ.get(ENV_DB_RETENTION_MIN):
             try:
                 self.DB_RETENTION_MIN = int(os.environ.get(ENV_DB_RETENTION_MIN))
@@ -87,7 +90,6 @@ class Config:
     def from_file(self, filename):
         with open(filename, 'r') as json_file:
             config = json.load(json_file)
-
 
             if 'dataFolder' in config:
                 self.DATA_FOLDER = config['dataFolder']
@@ -104,6 +106,9 @@ class Config:
 
             if 'militaryOnly' in config:
                 self.MILTARY_ONLY = config['militaryOnly']
+
+            if 'crawlUnknownAircraft' in config:
+                self.UNKNOWN_AIRCRAFT_CRAWLING = config['crawlUnknownAircraft']                
 
             if 'deleteAfterMinutes' in config:
                 self.DB_RETENTION_MIN = config['deleteAfterMinutes']

@@ -17,7 +17,7 @@ class OpenskyNet:
     def __init__(self):
 
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
             "Content-type": "application/json",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
@@ -38,7 +38,11 @@ class OpenskyNet:
         try:
             
             url = 'https://opensky-network.org/api/metadata/aircraft/icao/{:s}'.format(mode_s_hex)
-            response = requests.get(url, headers=self.headers)            
+            response = requests.get(url, headers=self.headers)
+
+            if response.status_code == requests.codes.not_found:
+                return None
+
             response.raise_for_status()
 
             aircraft = response.json()

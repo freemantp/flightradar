@@ -5,3 +5,5 @@ resources/*.db
 resources/*.db-shm
 resources/*.db-wal
 config*.json
+resources/BaseStation.sqb
+resources/flights.sqlite

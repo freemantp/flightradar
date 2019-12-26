@@ -11,7 +11,7 @@ logger = logging.getLogger('BAZL-LFR')
 
 class BazlLFR:
 
-    """ Bazl LFR Queries """
+    ''' Bazl LFR Queries '''
 
     def __init__(self):
 
@@ -28,10 +28,10 @@ class BazlLFR:
         self.known_replacements['PILATUS AIRCRAFT LTD.'] = 'Pilatus'
 
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0',
-            "Content-type": "application/json",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
+            'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
+            'Content-type': 'application/json',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'de,en-US;q=0.7,en;q=0.3'
         }
         self.timeout = 10
         self.maxretires = 5
@@ -44,21 +44,25 @@ class BazlLFR:
         return ModesUtil.is_swiss(modes_address)
 
     def query_aircraft(self, mode_s_hex):
-        """ queries aircraft data """
+        ''' queries aircraft data '''
 
         try:
             post_body = {
-                'current_page_number':	1,
+                'current_page_number':1,
                 'language':	'en',
-                'page_result_limit':	10,
+                'page_result_limit': 10,
+                'sort_list': 'registration',
                 'query': {
                     'icao':	mode_s_hex,
-                    'showDeregistered':	False
+                    'aircraftStatus': [
+                        'Registered'
+                    ]
                 },
                 'queryProperties': {
-                    'icao':	mode_s_hex,
-                    'showDeregistered':	False},
-                'sort_list': 'registration'
+                    'icao':	mode_s_hex,                    
+                    'aircraftStatus': [
+                        'Registered'
+                    ]}
             }
 
             url = 'https://app02.bazl.admin.ch/web/bazl-backend/lfr'.format(mode_s_hex)

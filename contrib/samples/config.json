@@ -9,5 +9,6 @@
         "syslogFormat":"mysematexkey:%(message)s",
         "logLevel": "DEBUG",
         "logToConsole": true
-    }
+    },
+    "crawlUnknownAircraft": false
 }

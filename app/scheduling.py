@@ -36,16 +36,16 @@ def configure_scheduling(app: Flask, conf: Config):
             logger.warn('Updater could not be started, previous is still running')
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
-
+    
     @scheduler.task('interval', id=UPDATER_JOB_NAME, seconds=1, misfire_grace_time=3, coalesce=True)
     def update_flights():
-
         with app.app_context():
-             app.updater.update()
+            app.updater.update()
 
-    @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
-    def crawl_airplanes():
-        with app.app_context():
-            app.crawler.crawl_sources()
+    if conf.UNKNOWN_AIRCRAFT_CRAWLING:
+        @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
+        def crawl_airplanes():
+            with app.app_context():
+                app.crawler.crawl_sources()
 
     app.apscheduler.start()
