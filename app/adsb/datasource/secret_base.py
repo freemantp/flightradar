@@ -40,6 +40,9 @@ class SecretBasesUk:
     def accept(self, modes_address):
         return self.modes_util.is_military(modes_address)
 
+    def is_sane_field(self, field_content):
+        return 'Transponder Logs' not in field_content
+
     def query_aircraft(self, mode_s_hex):
         """ queries aircraft data """
 
@@ -70,10 +73,10 @@ class SecretBasesUk:
             if self.REGISTRATION_FIELD in named_fields:
                 aircraft.reg = named_fields[self.REGISTRATION_FIELD]
 
-            if len(unnamed_fields) == 3:
+            if len(unnamed_fields) == 3 and self.is_sane_field(unnamed_fields[1]) and self.is_sane_field(unnamed_fields[2]):
                 aircraft.operator = unnamed_fields[1]
                 aircraft.type2 = unnamed_fields[2]
-            elif len(unnamed_fields) == 2:
+            elif len(unnamed_fields) == 2 and self.is_sane_field(unnamed_fields[1]):
                 aircraft.type2 = unnamed_fields[1]
             else:
                 logger.error('Could not parse Fields')
