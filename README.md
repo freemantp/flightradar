@@ -1,6 +1,14 @@
-# Flight radar view
+# Flight radar
 
-Polls flight data from radar servers ([ModeSMixer2](http://xdeco.org/?page_id=48) or [Virtual Radar Server](http://www.virtualradarserver.co.uk/)) and presents a chronological view of past flights with an interative live map of position reports. 
+Fetches [ADS-B](https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_-_broadcast) flight data from radar servers ([ModeSMixer2](http://xdeco.org/?page_id=48) or [Virtual Radar Server](http://www.virtualradarserver.co.uk/)) and presents a chronological view of past flights with an interactive live map of position reports. 
+
+## Impressions
+
+### Ovierview of past flights
+![Aircraft](https://user-images.githubusercontent.com/54601848/71522312-70d61200-28c4-11ea-9295-cd98c9d20b42.png)
+
+### Flight path visualization
+![Flightpath](https://user-images.githubusercontent.com/54601848/71522306-6ae03100-28c4-11ea-9db8-c93fad289ffe.png)
 
 ## Prerequisites
 
