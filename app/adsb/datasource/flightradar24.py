@@ -73,16 +73,16 @@ class Flightradar24:
                         operator = None
                     return Aircraft(mode_s_hex, reg, type1, type2, operator)
 
-                elif res.status == 402:                    
-                    res.read()
+                elif response.status == 402:                    
+                    response.read()
                     logger.warn('HTTP 402 - Payment Required')
                     self._fail_and_sleep()
-                elif res.status >= 500 and res.status < 600:
-                     res.read()
+                elif response.status >= 500 and response.status < 600:
+                     response.read()
                      self._fail_and_sleep()              
                 else:
-                    res.read()
-                    raise ValueError('Unexpected http code: %s' % res.status)
+                    response.read()
+                    raise ValueError('Unexpected http code: %s' % response.status)
 
             except HTTPError as http_err:
 
