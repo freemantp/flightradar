@@ -36,6 +36,7 @@ See section below for details
 * MIL_ONLY
 * DB_RETENTION_MIN
 * UNKNOWN_AIRCRAFT_CRAWLING
+* GOOGLE_MAPS_API_KEY
 
 ### Config options
 
@@ -50,6 +51,7 @@ See section below for details
     * ```logLevel``` [optional] Log level, See [here](https://docs.python.org/2/library/logging.html#logging-levels) for more infos
     * ```logToConsole``` [optional] If true, logs are logged to syslog and to console, if false only to syslog
 * ```crawlUnknownAircraft``` If true, aircraft not found in BaseStation.sqb will be looked up in various data sources in the web. Since this method uses crawling which might now always be allowed. Beware: This could potentially lead to blockage of your IP address
+* ```googleMapsApiKey``` The map view needs an API key to render the map. You can get one [here](https://developers.google.com/maps/documentation/javascript/get-api-key).
 
 ## Running Flightradar
 
