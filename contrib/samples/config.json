@@ -10,5 +10,6 @@
         "logLevel": "DEBUG",
         "logToConsole": true
     },
-    "crawlUnknownAircraft": false
+    "crawlUnknownAircraft": false,
+    "googleMapsApiKey": "INSERT YOU GOOGLE MAPS API KEY HERE"
 }

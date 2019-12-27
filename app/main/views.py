@@ -28,11 +28,11 @@ def index():
 
 @main.route("/map/<flight_id>") 
 def get_map(flight_id):
-    return render_template('map.html', flight_id=flight_id)
+    return render_template('map.html', flight_id=flight_id, google_maps_api_key=app.config['GOOGLE_MAPS_API_KEY'])
 
 @main.route("/map") 
 def get_map_all():
-    return render_template('live.html')
+    return render_template('live.html', google_maps_api_key=app.config['GOOGLE_MAPS_API_KEY'])
 
 @main.route("/archived") 
 def archived():
