@@ -13,7 +13,7 @@ Fetches [ADS-B](https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_-
 ## Prerequisites
 
 1. Make sure you have Python 3 installed,
-1. Install the python flask package with ```pip3 install -r requirements.txt```
+1. Install the dependencies package with ```pip3 install -r requirements.txt```
 
 ## Configuration
 
@@ -23,7 +23,7 @@ The application can either be configured by enviroment variables or by a config 
 
 1. Copy the ```config.json``` from contrib/samples to the project root
 2. Configure host/port of your radar server
-3. Set the path to your data folder. It must contain BaseStation.sqb (not included, [get it here](https://data.flightairmap.com/)) and mil_ranges.csv. Example ``` "dataFolder" : "/home/pi/adsb-playground/resources/",```
+3. Set the path to your data folder. It must contain BaseStation.sqb (not included, [get it here](https://data.flightairmap.com/)) and mil_ranges.csv. Example ``` "dataFolder" : "/path/to/installation/resources/",```
 4. Chose whether you want to track military planes only
 
 ### Enviroment variables
@@ -61,22 +61,25 @@ flightradar uses an Sqlite3 database (resources/flights.sqlite) to store flight 
 
 Initialize schema:
 ```
-SET FLASK_APP=flightradar.py
+export FLASK_APP=flightradar.py
 flask initschema
 ```
-
 ### Starting the application
 
 Running it with the debug webserver (__Not recommended__ for productive use). Don't forget to initialize the db  (see abve) before the first run
 
 ```
-SET FLASK_APP=flightradar.py
+export FLASK_APP=flightradar.py
 flask run
 ```
 Runnig it with WSGI (__productive setup__) (binds to all interfaces on port 8083)
 ```
 gunicorn flightradar:app --bind 0.0.0.0:8083
 ```
+
+## Using Windows
+When running the application on Windows, consider the following: 
+* Use ```SET``` instead of ```export``` when using Windows
 
 ## Known issues
 * Performance may suffer if you have a lot of flights in your database. There's a lot of potential for improvement in the persistence layer.
