@@ -40,24 +40,22 @@ See section below for details
 
 ### Config options
 
-* ```serviceUrl``` The url to your radar service
-* ```type``` The type of your radar service, eithr vrs for VirtualRadarServer or mm2 for ModeSMixer2  
-* ```dataFolder``` the absolute path to your resources folder
-* ```militaryOnly``` Whether everything other than military planes should be filtered (true or false)
-* ```deleteAfterMinutes``` Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely
-* ```logging``` [optional] This section allows to configure logging.
-    * ```syslogHost``` The host to send logs to 
-    * ```syslogFormat``` The syslog log format
-    * ```logLevel``` [optional] Log level, See [here](https://docs.python.org/2/library/logging.html#logging-levels) for more infos
-    * ```logToConsole``` [optional] If true, logs are logged to syslog and to console, if false only to syslog
-* ```crawlUnknownAircraft``` If true, aircraft not found in BaseStation.sqb will be looked up in various data sources in the web. Since this method uses crawling which might now always be allowed. Beware: This could potentially lead to blockage of your IP address
-* ```googleMapsApiKey``` The map view needs an API key to render the map. You can get one [here](https://developers.google.com/maps/documentation/javascript/get-api-key).
+| Option name                | Optional | Default value | Description                                                                                                                                                                                                                                                                                                                        |
+|----------------------------|----------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ```serviceUrl```           | no       |               | The url to your radar service                                                                                                                                                                                                                                                                                                      |
+| ```type```                 | yes      | vrs           | The type of your radar service, eithr vrs for VirtualRadarServer or mm2 for ModeSMixer2                                                                                                                                                                                                                                            |
+| ```dataFolder```           | yes      | resources     | the absolute path to your resources folder                                                                                                                                                                                                                                                                                         |
+| ```militaryOnly```         | yes      | false         | Whether everything other than military planes should be filtered (true or false)                                                                                                                                                                                                                                                   |
+| ```deleteAfterMinutes```   | yes      | 1440          | Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely                                                                                                                                                        |
+| ```logging```              | yes      |               | ```syslogHost``` The host to send logs to<br>```syslogFormat``` The syslog log format<br>```logLevel``` [optional] Log level, See [here](https://docs.python.org/2/library/logging.html#logging-levels) for more infos<br>```logToConsole``` [optional] If true, logs are logged to syslog and to console, if false only to syslog |
+| ```crawlUnknownAircraft``` | yes      | false         | If true, aircraft not found in BaseStation.sqb will be looked up in various data sources in the web. Since this method uses crawling which might now always be allowed. Beware: This could potentially lead to blockage of your IP address                                                                                         |
+| ```googleMapsApiKey```     | no       |               | The map view needs an API key to render the map. You can get one [here](https://developers.google.com/maps/documentation/javascript/get-api-key).                           
 
 ## Running Flightradar
 
 ### Initializing the database
 
-flightradar uses an Sqlite3 database (resources/flights.sqlite) to store flight information. You have to initialize the database with its schema first. When building a docker image, the database is initialized upon build time. 
+flightradar uses an Sqlite3 database (resources/flights.sqlite) to store flight information. You have to create and initialize the database with its schema first. When building a docker image, the database is initialized upon build time. 
 
 Initialize schema:
 ```

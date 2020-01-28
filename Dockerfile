@@ -1,4 +1,4 @@
-FROM python:3.6-alpine 
+FROM python:3.8-alpine 
 
 LABEL maintainer="Michael Morandi"
 
@@ -23,7 +23,7 @@ COPY app app
 RUN mkdir resources
 COPY resources/mil_ranges.csv resources/
 COPY resources/meta.json resources/
-COPY flightradar.py config.json ./
+COPY flightradar.py ./
 COPY --chown=radar resources/BaseStation.sqb resources/
 COPY --chown=radar contrib/start.sh ./
 

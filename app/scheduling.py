@@ -23,9 +23,6 @@ def configure_scheduling(app: Flask, conf: Config):
     updater = create_updater(conf)
     app.updater = updater
 
-    crawler = AirplaneCrawler(conf)
-    app.crawler = crawler
-    
     logging.getLogger('apscheduler.executors.default').setLevel(logging.WARN)
     logging.getLogger('apscheduler.scheduler').setLevel(logging.ERROR)
 
@@ -42,7 +39,11 @@ def configure_scheduling(app: Flask, conf: Config):
         with app.app_context():
             app.updater.update()
 
-    if conf.UNKNOWN_AIRCRAFT_CRAWLING:
+    if conf.UNKNOWN_AIRCRAFT_CRAWLING and conf.RADAR_SERVICE_TYPE == 'mm2': # TODO enable vrs
+
+        crawler = AirplaneCrawler(conf)
+        app.crawler = crawler
+
         @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
         def crawl_airplanes():
             with app.app_context():

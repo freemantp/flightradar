@@ -1,7 +1,10 @@
 import json
 import os
 import logging
+from enum import Enum
 from pathlib import Path
+
+logger =  logging.getLogger("Config")
 
 class LoggingConfig:
 
@@ -34,6 +37,11 @@ class LoggingConfig:
         self.logLevel = logLevel
         self.logToConsole = logToConsole
 
+class ConfigSource(Enum):
+    NONE = 0
+    FILE = 1
+    ENV = 2
+
 class Config:
 
     """ Application configuration """
@@ -47,17 +55,22 @@ class Config:
     UNKNOWN_AIRCRAFT_CRAWLING = False
     GOOGLE_MAPS_API_KEY = 'DUMMY_KEY'
 
-    def __init__(self):
+    def __init__(self, config_file='config.json'):
 
-        CONFIG_FILE_PATH = 'config.json'
+        self.config_src = ConfigSource.NONE
 
-        config_file = Path(CONFIG_FILE_PATH)
+        config_file = Path(config_file)
         if config_file.is_file():
-            self.from_file(CONFIG_FILE_PATH)
+            self.from_file(config_file)
+        else:
+            self.from_env()
 
-        self.from_env()
+        if self.config_src == ConfigSource.NONE:
+            raise ValueError('Configuration is neither read from env nor file')
+        else:
+            logger.info('Config loaded from source: {}'.format(self.config_src.name))
 
-    def str2bool(v):
+    def str2bool(self, v):
         return v.lower() in ("yes", "true", "t", "1")
 
     def sanitize_url(self, url):
@@ -71,18 +84,18 @@ class Config:
         ENV_MIL_ONLY = 'MIL_ONLY'
         ENV_DB_RETENTION_MIN = 'DB_RETENTION_MIN'
         ENV_UNKNOWN_AIRCRAFT_CRAWLING = 'UNKNOWN_AIRCRAFT_CRAWLING'
-        ENV_GOOGLE_MAPS_API_KEY = 'DUMMY_KEY'
+        ENV_GOOGLE_MAPS_API_KEY = 'GOOGLE_MAPS_API_KEY'
 
         if os.environ.get(ENV_DATA_FOLDER):
             self.DATA_FOLDER = os.environ.get(ENV_DATA_FOLDER)
         if os.environ.get(ENV_RADAR_SERVICE_URL):
             self.RADAR_SERVICE_URL = self.sanitize_url(os.environ.get(ENV_RADAR_SERVICE_URL))
         if os.environ.get(ENV_RADAR_SERVICE_TYPE):
-            self.RADAR_SERVICE_TYPE = os.environ.get(ENV_RADAR_SERVICE_TYPE)
+            self.RADAR_SERVICE_TYPE = os.environ.get(ENV_RADAR_SERVICE_TYPE)        
         if os.environ.get(ENV_MIL_ONLY):
-            self.MILTARY_ONLY = str2bool(os.environ.get(ENV_MIL_ONLY))
+            self.MILTARY_ONLY = self.str2bool(os.environ.get(ENV_MIL_ONLY))
         if os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING):
-            self.UNKNOWN_AIRCRAFT_CRAWLING = str2bool(os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING))
+            self.UNKNOWN_AIRCRAFT_CRAWLING = self.str2bool(os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING))
         if os.environ.get(ENV_GOOGLE_MAPS_API_KEY):
             self.GOOGLE_MAPS_API_KEY = os.environ.get(ENV_GOOGLE_MAPS_API_KEY)
         if os.environ.get(ENV_DB_RETENTION_MIN):
@@ -90,6 +103,8 @@ class Config:
                 self.DB_RETENTION_MIN = int(os.environ.get(ENV_DB_RETENTION_MIN))
             except ValueError:
                 pass
+
+        self.config_src = ConfigSource.ENV
 
     def from_file(self, filename):
         with open(filename, 'r') as json_file:
@@ -102,8 +117,6 @@ class Config:
 
             if 'type' in config:
                 self.RADAR_SERVICE_TYPE = config['type']
-            else:
-                raise ValueError('type not specified in config')
 
             if 'serviceUrl' in config:
                 self.RADAR_SERVICE_URL = self.sanitize_url(config['serviceUrl'])
@@ -125,6 +138,8 @@ class Config:
                     self.LOGGING_CONFIG = LoggingConfig.from_json(config['logging'])
                 except ValueError as e:
                     logging.getLogger().error(e)
+
+            self.config_src = ConfigSource.FILE
 
     def __str__(self):
         return 'data folder: {0}, service url: {1}, type: {2}, mil only: {3}, delete after: {4}, crawling: {5}, google maps apikey: {6}'.format(self.DATA_FOLDER, self.RADAR_SERVICE_URL, self.RADAR_SERVICE_TYPE, self.MILTARY_ONLY, self.DB_RETENTION_MIN, self.UNKNOWN_AIRCRAFT_CRAWLING, self.GOOGLE_MAPS_API_KEY) 

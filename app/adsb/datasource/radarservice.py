@@ -10,7 +10,7 @@ class RadarService:
 
         self.base_path = '{:s}://{:s}{:s}'.format(
             self._url_parms.scheme, 
-            self._url_parms.hostname + (self._url_parms.port if self._url_parms.port else ""), 
+            self._url_parms.netloc, 
             self._url_parms.path)
             
         self.headers = {
