@@ -1,0 +1,4 @@
+#!/bin/bash 
+
+#see https://docs.docker.com/docker-hub/builds/advanced/
+docker build -t $IMAGE_NAME --build-arg COMMIT_ID=$SOURCE_COMMIT .

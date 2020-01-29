@@ -7,8 +7,6 @@ from .. adsb.db.dbmodels import Flight
 from .. adsb.flightupdater import FlightUpdater
 from .. util.flask_util import get_boolean_arg
 
-from .. import get_basestation_db
-
 import time
 from pytz import timezone
 from dateutil import tz

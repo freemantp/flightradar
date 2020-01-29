@@ -2,6 +2,8 @@ FROM python:3.8-alpine
 
 LABEL maintainer="Michael Morandi"
 
+ARG COMMIT_ID="undefined"
+
 # system prerquisites
 RUN apk update
 RUN apk upgrade
@@ -22,10 +24,13 @@ RUN venv/bin/pip install -r requirements.txt
 COPY app app
 RUN mkdir resources
 COPY resources/mil_ranges.csv resources/
-COPY resources/meta.json resources/
+COPY resources/BaseStation.sqb.tar.bz2 resources/
+RUN tar xfvj resources/BaseStation.sqb.tar.bz2 -C resources
+RUN rm resources/BaseStation.sqb.tar.bz2
+RUN chown radar resources/BaseStation.sqb
 COPY flightradar.py ./
-COPY --chown=radar resources/BaseStation.sqb resources/
 COPY --chown=radar contrib/start.sh ./
+RUN echo "{ \"gitCommitId\": \"$COMMIT_ID\", \"buildTimestamp\": \"`date -I'seconds'`\"}" > resources/meta.json
 
 # prepare dbs
 ENV FLASK_APP flightradar.py
