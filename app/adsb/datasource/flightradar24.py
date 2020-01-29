@@ -57,36 +57,33 @@ class Flightradar24:
 
                 url = 'https://api.flightradar24.com/common/v1/search.json?fetchBy=reg&query={:s}'.format(mode_s_hex)
                 response = requests.get(url, headers=self.headers)            
-                response.raise_for_status()
 
 
-                json_obj = response.json()
 
-                if json_obj['result']['response']['aircraft']['data']:
-                    aircraft = json_obj['result']['response']['aircraft']['data'][0]
-                    reg = aircraft['registration']
-                    type1 = aircraft['model']['code']
-                    type2 = aircraft['model']['text']
-                    if aircraft['airline']:
-                        operator = aircraft['airline']['name']
-                    else:
-                        operator = None
-                    return Aircraft(mode_s_hex, reg, type1, type2, operator)
+                if response.status_code == requests.codes.ok:
+                    json_obj = response.json()
+                    if json_obj['result']['response']['aircraft']['data']:
+                        aircraft = json_obj['result']['response']['aircraft']['data'][0]
+                        reg = aircraft['registration']
+                        type1 = aircraft['model']['code']
+                        type2 = aircraft['model']['text']
+                        if aircraft['airline']:
+                            operator = aircraft['airline']['name']
+                        else:
+                            operator = None
+                        return Aircraft(mode_s_hex, reg, type1, type2, operator)
 
-                elif response.status == 402:                    
-                    response.read()
+                elif response.status_code == requests.codes.payment:                    
                     logger.warn('HTTP 402 - Payment Required')
                     self._fail_and_sleep()
-                elif response.status >= 500 and response.status < 600:
-                     response.read()
+                elif response.status_code >= 500 and response.status_code < 600:
                      self._fail_and_sleep()              
                 else:
-                    response.read()
-                    raise ValueError('Unexpected http code: %s' % response.status)
+                    logger.warn('Unexpected http code: {}'.format(response.status_code))
 
             except HTTPError as http_err:
 
-                if http_err.response.status_code == requests.codes.payment:
+                if http_err.response.status_code_code == requests.codes.payment:
                     logger.warn('HTTP 402 - Payment Required')            
                 else:
                     logger.exception(http_err)

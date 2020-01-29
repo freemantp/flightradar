@@ -179,11 +179,11 @@ class FlightUpdater(object):
                 # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
                 thresh_timestmp = self._threshold_timestamp()
 
-                flight_result = (Flight.select(Flight.id)
+                flight_result = (Flight.select(Flight.id, Flight.modeS, Flight.callsign)
                                 .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
 
                 if flight_result:
-                    if modeS_callsgn[1]:
+                    if modeS_callsgn[1] and not flight_result[0].callsign:
                         self.update_callsign(modeS_callsgn[1], flight_result[0].id)
                         updated_flights.append(modeS_callsgn)
 
@@ -199,17 +199,16 @@ class FlightUpdater(object):
             logger.info('Inserted {:s}'.format(inserted_msg))
 
         if updated_flights:
-            inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in updated_flights])
-            logger.info('Updated {:s}'.format(inserted_msg))
+            updated_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in updated_flights])
+            logger.info('Updated {:s}'.format(updated_msg))
 
     def insert_flight(self, modeS_callsgn):
         flight_id = Flight.insert(modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()
         self.modeS_flight_map[modeS_callsgn[0]] = flight_id
 
 
-    def update_callsign(self, callsign, flight_id):
-        Flight.update(callsign=callsign).where(Flight.id == flight_id).execute() 
-    
+    def update_callsign(self, callsign, flight_id):        
+        Flight.update(callsign=callsign).where(Flight.id == flight_id).execute()
 
     def get_silhouete_params(self):
         return self._service.get_silhouete_params()
