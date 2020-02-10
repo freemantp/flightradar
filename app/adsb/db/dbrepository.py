@@ -1,6 +1,7 @@
 from .dbmodels import Position, Flight
 from datetime import datetime, timedelta
 from peewee import fn
+from itertools import zip_longest
 
 class DBRepository:
 
@@ -89,6 +90,14 @@ class DBRepository:
     @staticmethod
     def delete_flights_and_positions(flight_ids: list):
         assert(len(flight_ids) > 0)
-        Position.delete().where(Position.flight_fk << flight_ids).execute()
-        Flight.delete().where(Flight.id << flight_ids).execute()
+
+        for ids_chunk in DBRepository._get_chunks(flight_ids, 200):
+            Position.delete().where(Position.flight_fk << ids_chunk).execute()
+            Flight.delete().where(Flight.id << ids_chunk).execute()
+
+    @staticmethod
+    def _get_chunks(iterable, chunk_size):
+        args = [iter(iterable)] * chunk_size
+        return zip_longest(*args, fillvalue=None)
+
 

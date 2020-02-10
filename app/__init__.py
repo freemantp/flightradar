@@ -7,6 +7,8 @@ from .meta import MetaInformation
 from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db
 from .adsb.util.logging import init_logging
+from .util.encoder import RadarJsonEncoder
+
 from .scheduling import configure_scheduling
 
 main = Blueprint('main', __name__)
@@ -35,6 +37,8 @@ def create_app():
     app.metaInfo = MetaInformation()
 
     app.flight_db = init_db(conf.DATA_FOLDER)
+
+    app.json_encoder = RadarJsonEncoder
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')

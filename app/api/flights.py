@@ -3,12 +3,21 @@ from .. import get_basestation_db
 from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
 from .. exceptions import ValidationError
+from .. adsb.db.dbmodels import Flight
 
 from flask import current_app as app, Response, request, jsonify, abort
 
 @api.route('/info')
 def get_meta_info():
     return jsonify(app.metaInfo.__dict__)
+
+@api.route('/flights')
+def get_flights():
+
+    result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+                        .order_by(Flight.last_contact.desc()))
+
+    return jsonify([f for f in result_set])    
 
 @api.route('/positions/live')
 def get_live_positions():
@@ -22,8 +31,7 @@ def get_positions(flight_id):
 
         if DBRepository.flight_exists(flight_id):
             positions = DBRepository.get_positions(flight_id)
-            pos_entries = [[ [p.lat, p.lon, p.alt] for p in positions]]
-            return jsonify(pos_entries)
+            return jsonify([[p for p in positions]])
         else:
             abort(404)
 
