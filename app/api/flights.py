@@ -1,5 +1,4 @@
 from . import api
-from .. import get_basestation_db
 from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
 from .. exceptions import ValidationError
