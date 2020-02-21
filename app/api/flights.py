@@ -12,11 +12,16 @@ def get_meta_info():
 
 @api.route('/flights')
 def get_flights():
+    try:
+        limit = request.args.get('limit', default = None, type = int)
+        print(limit)
 
-    result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
-                        .order_by(Flight.last_contact.desc()))
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+                            .order_by(Flight.last_contact.desc()).limit(limit))
 
-    return jsonify([f for f in result_set])    
+        return jsonify([f for f in result_set])
+    except ValueError:
+        raise ValidationError('invalid arguments')
 
 @api.route('/positions/live')
 def get_live_positions():
@@ -52,10 +57,15 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
-    return response    
-@api.errorhandler(ValidationError)
+    return response
+
+@api.errorhandler(ValueError)
 def validation_error(e):
     return jsonify({'error': e.args[0]}), 400
+
+@api.errorhandler(ValueError)
+def validation_error(e):
+    return jsonify({'error': e.args[0]}), 400    
 
 @api.app_errorhandler(500)
 def handle_generic_err(e):
