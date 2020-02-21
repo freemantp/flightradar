@@ -14,7 +14,6 @@ def get_meta_info():
 def get_flights():
     try:
         limit = request.args.get('limit', default = None, type = int)
-        print(limit)
 
         result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
                             .order_by(Flight.last_contact.desc()).limit(limit))
