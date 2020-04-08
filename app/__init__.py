@@ -1,5 +1,4 @@
 from flask import Flask, Blueprint, g
-from flask_cors import CORS
 from click import get_current_context
 from os import path
 
@@ -39,12 +38,11 @@ def create_app():
     app.flight_db = init_db(conf.DATA_FOLDER)
 
     app.json_encoder = RadarJsonEncoder
-    
-    cors = CORS(app, resources={r'/api/v1/*': {'origins': '*'}})
+
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
-
+    
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint, url_prefix='/')
 

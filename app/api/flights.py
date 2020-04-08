@@ -22,7 +22,7 @@ def get_flights():
     except ValueError:
         raise ValidationError('invalid arguments')
 
-@api.route('/positions/live')
+@api.route('/positions/live', methods=['GET'])
 def get_live_positions():
     return jsonify(app.updater.get_cached_flights())
 

@@ -1,7 +1,6 @@
 beautifulsoup4==4.8.2
 Click==7.0
 Flask==1.1.1
-Flask-Cors==3.0.8
 Flask-APScheduler==1.11.0
 peewee==3.13.1
 python-dateutil==2.8.1
