@@ -22,6 +22,21 @@ def get_flights():
     except ValueError:
         raise ValidationError('invalid arguments')
 
+@api.route('/flights/<flight_id>')
+def get_flight(flight_id):
+    try:
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+                            .where(Flight.id == flight_id)
+                            .order_by(Flight.last_contact.desc()).limit(1))
+
+        if result_set.exists():
+            return jsonify(result_set[0])
+        else:
+            abort(404)
+            
+    except ValueError:
+        raise ValidationError('invalid arguments')    
+
 @api.route('/positions/live', methods=['GET'])
 def get_live_positions():
     return jsonify(app.updater.get_cached_flights())

@@ -65,7 +65,7 @@ class BazlLFR:
                     ]}
             }
 
-            url = 'https://app02.bazl.admin.ch/web/bazl-backend/lfr'.format(mode_s_hex)
+            url = 'https://app02.bazl.admin.ch/web/bazl-backend/lfr'
             response = requests.post(url, json=post_body, headers=self.headers)            
             response.raise_for_status()
 
