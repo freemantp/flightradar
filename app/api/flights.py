@@ -42,7 +42,7 @@ def get_live_positions():
     return jsonify(app.updater.get_cached_flights())
 
 
-@api.route('/flight/<flight_id>/positions') 
+@api.route('/flights/<flight_id>/positions') 
 def get_positions(flight_id):
     try:
         int(flight_id)
