@@ -407,7 +407,7 @@
       var basepath = '../api/v1';
 
       if (flightId.length > 0) {
-        var posPath = basepath + '/flight/' +  flightId + '/positions';
+        var posPath = basepath + '/flights/' +  flightId + '/positions';
         update_flightpaths(posPath);
         var refresh = setInterval(function () { update_flightpaths(posPath) }, 1000);
       } else {        
