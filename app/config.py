@@ -53,7 +53,6 @@ class Config:
     DB_RETENTION_MIN = 1440
     LOGGING_CONFIG = None
     UNKNOWN_AIRCRAFT_CRAWLING = False
-    GOOGLE_MAPS_API_KEY = 'DUMMY_KEY'
 
     def __init__(self, config_file='config.json'):
 
@@ -84,7 +83,6 @@ class Config:
         ENV_MIL_ONLY = 'MIL_ONLY'
         ENV_DB_RETENTION_MIN = 'DB_RETENTION_MIN'
         ENV_UNKNOWN_AIRCRAFT_CRAWLING = 'UNKNOWN_AIRCRAFT_CRAWLING'
-        ENV_GOOGLE_MAPS_API_KEY = 'GOOGLE_MAPS_API_KEY'
 
         if os.environ.get(ENV_DATA_FOLDER):
             self.DATA_FOLDER = os.environ.get(ENV_DATA_FOLDER)
@@ -96,8 +94,6 @@ class Config:
             self.MILTARY_ONLY = self.str2bool(os.environ.get(ENV_MIL_ONLY))
         if os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING):
             self.UNKNOWN_AIRCRAFT_CRAWLING = self.str2bool(os.environ.get(ENV_UNKNOWN_AIRCRAFT_CRAWLING))
-        if os.environ.get(ENV_GOOGLE_MAPS_API_KEY):
-            self.GOOGLE_MAPS_API_KEY = os.environ.get(ENV_GOOGLE_MAPS_API_KEY)
         if os.environ.get(ENV_DB_RETENTION_MIN):
             try:
                 self.DB_RETENTION_MIN = int(os.environ.get(ENV_DB_RETENTION_MIN))
@@ -128,10 +124,7 @@ class Config:
                 self.UNKNOWN_AIRCRAFT_CRAWLING = config['crawlUnknownAircraft']                
 
             if 'deleteAfterMinutes' in config:
-                self.DB_RETENTION_MIN = config['deleteAfterMinutes']
-
-            if 'googleMapsApiKey' in config:
-                self.GOOGLE_MAPS_API_KEY = config['googleMapsApiKey']                
+                self.DB_RETENTION_MIN = config['deleteAfterMinutes']  
 
             if 'logging' in config:
                 try:
@@ -142,7 +135,7 @@ class Config:
             self.config_src = ConfigSource.FILE
 
     def __str__(self):
-        return 'data folder: {0}, service url: {1}, type: {2}, mil only: {3}, delete after: {4}, crawling: {5}, google maps apikey: {6}'.format(self.DATA_FOLDER, self.RADAR_SERVICE_URL, self.RADAR_SERVICE_TYPE, self.MILTARY_ONLY, self.DB_RETENTION_MIN, self.UNKNOWN_AIRCRAFT_CRAWLING, self.GOOGLE_MAPS_API_KEY) 
+        return 'data folder: {0}, service url: {1}, type: {2}, mil only: {3}, delete after: {4}, crawling: {5}'.format(self.DATA_FOLDER, self.RADAR_SERVICE_URL, self.RADAR_SERVICE_TYPE, self.MILTARY_ONLY, self.DB_RETENTION_MIN, self.UNKNOWN_AIRCRAFT_CRAWLING) 
 
 class DevConfig(Config):
     DEBUG = True

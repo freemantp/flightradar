@@ -36,7 +36,6 @@ See section below for details
 * MIL_ONLY
 * DB_RETENTION_MIN
 * UNKNOWN_AIRCRAFT_CRAWLING
-* GOOGLE_MAPS_API_KEY
 
 ### Config options
 

@@ -15,8 +15,7 @@ class ConfigTest(unittest.TestCase):
             env.set('SERVICE_TYPE','srvtype')
             env.set('MIL_ONLY','true')
             env.set('DB_RETENTION_MIN','999')
-            env.set('UNKNOWN_AIRCRAFT_CRAWLING','true')
-            env.set('GOOGLE_MAPS_API_KEY','someres12345abcdefg')            
+            env.set('UNKNOWN_AIRCRAFT_CRAWLING','true')           
 
             config = Config('/path/tononexistent.json')
             self.assertEqual(ConfigSource.ENV, config.config_src)
@@ -26,6 +25,5 @@ class ConfigTest(unittest.TestCase):
             self.assertEqual(True, config.MILTARY_ONLY)
             self.assertEqual(999, config.DB_RETENTION_MIN)
             self.assertEqual(True, config.UNKNOWN_AIRCRAFT_CRAWLING)
-            self.assertEqual('someres12345abcdefg', config.GOOGLE_MAPS_API_KEY)
 
     

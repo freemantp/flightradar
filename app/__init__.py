@@ -11,8 +11,6 @@ from .util.encoder import RadarJsonEncoder
 
 from .scheduling import configure_scheduling
 
-main = Blueprint('main', __name__)
-
 def get_basestation_db():
     from flask import current_app as app
 
@@ -39,12 +37,8 @@ def create_app():
 
     app.json_encoder = RadarJsonEncoder
 
-
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
-    
-    from .main import main as main_blueprint
-    app.register_blueprint(main_blueprint, url_prefix='/')
 
     # Run asynchronous tasks only if in run mode
     click_ctx = get_current_context(True)
