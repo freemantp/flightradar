@@ -9,6 +9,8 @@ from .adsb.datasource.airplane_crawler import AirplaneCrawler
 
 logger = logging.getLogger(__name__)
 
+UPDATER_JOB_NAME = 'flight_updater_job'
+
 def create_updater(config):    
     updater = FlightUpdater.Instance()
     updater.initialize(config)
@@ -25,8 +27,6 @@ def configure_scheduling(app: Flask, conf: Config):
 
     logging.getLogger('apscheduler.executors.default').setLevel(logging.WARN)
     logging.getLogger('apscheduler.scheduler').setLevel(logging.ERROR)
-
-    UPDATER_JOB_NAME = 'flight_updater_job'
 
     def my_listener(event):
         if event.code == EVENT_JOB_MAX_INSTANCES and event.job_id == UPDATER_JOB_NAME:

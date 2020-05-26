@@ -3,12 +3,25 @@ from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
 from .. exceptions import ValidationError
 from .. adsb.db.dbmodels import Flight
+from .. scheduling import UPDATER_JOB_NAME
 
 from flask import current_app as app, Response, request, jsonify, abort
 
 @api.route('/info')
 def get_meta_info():
     return jsonify(app.metaInfo.__dict__)
+
+@api.route('/alive')
+def alive():
+    return "Yes"
+
+@api.route('/ready')
+def ready():
+    updater_job = app.apscheduler.get_job(UPDATER_JOB_NAME)
+    if updater_job and not updater_job.pending:
+        return "Yes"
+    else:
+        abort(500)    
 
 @api.route('/flights')
 def get_flights():
