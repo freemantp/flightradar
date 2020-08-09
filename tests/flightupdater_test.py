@@ -1,10 +1,12 @@
 import unittest
 import time
+from typing import List
 
 from app.adsb.flightupdater import FlightUpdater
 from app.adsb.db.dbmodels import Position, Flight
 from app.config import Config
 from db_base_test import DbBaseTestCase
+from app.adsb.model.position_report import PositionReport
 
 
 class MockRadarService:
@@ -12,7 +14,7 @@ class MockRadarService:
     connection_alive = False
     flights = []
 
-    def query_live_flights(self, incomplete):
+    def query_live_flights(self, incomplete) -> List[PositionReport]:
         return self.flights
 
 

@@ -107,15 +107,14 @@ class FlightUpdater(object):
             if positions:
 
                 # Filter for military modeS
-                filtered_pos = [pos for pos in positions if self._mil_ranges.is_military(
-                    pos[0])] if self._mil_only else positions
+                filtered_pos = [pos for pos in positions if self._mil_ranges.is_military(pos.icao24)] if self._mil_only else positions
 
                 # Update flights
                 self.update_flights(filtered_pos)
                 flight_end_time = timer()
 
                 # Add non-empty positions
-                self.add_positions([p for p in filtered_pos if p[1] and p[2]])
+                self.add_positions([p for p in filtered_pos if p.lat and p.lon])
                 pos_end_time = timer()
 
             self.cleanup_items()
@@ -144,16 +143,18 @@ class FlightUpdater(object):
         """ Inserts positions into the database"""
 
         # Create tuples suitable for DB insertion
-        db_tuples = [(self.modeS_flight_map[p[0]], p[1], p[2], p[3]) for p in positions]
+        db_tuples = []
 
-        # If position is the same as last time, filter it
-        db_tuples = [t for t in db_tuples 
-                      if t[0] not in self.flight_lastpos_map 
-                      or (t[0] in self.flight_lastpos_map and self.flight_lastpos_map[t[0]] != t)]
+        for pos in positions:
 
-        for tpl in db_tuples:
-            self.flight_lastpos_map[tpl[0]] = tpl
-            self.flight_last_contact[tpl[0]] = datetime.utcnow()
+            tpl = (self.modeS_flight_map[pos.icao24], pos.lat, pos.lon, pos.alt)
+
+            # If position is the same as last time, filter it
+            if tpl[0] not in self.flight_lastpos_map or (tpl[0] in self.flight_lastpos_map and self.flight_lastpos_map[tpl[0]] != tpl):
+
+                db_tuples.append(tpl)
+                self.flight_lastpos_map[tpl[0]] = pos
+                self.flight_last_contact[tpl[0]] = datetime.utcnow()
 
         # Insert new
         if db_tuples:
@@ -174,7 +175,7 @@ class FlightUpdater(object):
         with db.atomic() as transaction:
 
             # (modeS, callsign), None for a callsign is allowed
-            for modeS_callsgn in [(f[0], f[4]) for f in flights]:
+            for modeS_callsgn in [(f.icao24, f.callsign) for f in flights]:
 
                 # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
                 thresh_timestmp = self._threshold_timestamp()

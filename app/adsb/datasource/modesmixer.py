@@ -2,6 +2,8 @@ from .radarservice import RadarService
 import json
 import logging
 import requests
+from typing import List
+from ..model.position_report import PositionReport
 from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
@@ -65,7 +67,7 @@ class ModeSMixer(RadarService):
         else:
             return None
 
-    def query_live_flights(self, filter_incomplete=True):
+    def query_live_flights(self, filter_incomplete=True) -> List[PositionReport]:
         """ 
         Retrieve active Mode-S adresses with current properties
 
@@ -91,9 +93,10 @@ class ModeSMixer(RadarService):
                     lon = flight['LO'] if 'LO' in flight and flight['LO'] else None
                     alt = flight['A'] if 'A' in flight and flight['A'] else None
                     callsign = flight['CS'] if 'CS' in flight and flight['CS'] else None
+                    track = flight['T'] if 'T' in flight and flight['T'] else None
 
                     if (lat and lon or alt) or (not filter_incomplete and callsign):
-                        flights.append((icao24, lat, lon, alt, callsign))
+                        flights.append(PositionReport(icao24, lat, lon, alt, track, callsign))
 
             return flights
         else:

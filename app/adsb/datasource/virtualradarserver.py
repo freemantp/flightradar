@@ -1,4 +1,6 @@
 from .radarservice import RadarService
+from ..model.position_report import PositionReport
+from typing import List
 import json
 import logging
 
@@ -11,7 +13,7 @@ class VirtualRadarServer(RadarService):
     def __init__(self, url):
         RadarService.__init__(self, url)
 
-    def query_live_flights(self, filter_incomplete=True):
+    def query_live_flights(self, filter_incomplete=True) -> List[PositionReport]:
         """ Returns a list of Mode-S adresses with current position information"""
 
         conn = self.get_connection()
@@ -35,9 +37,10 @@ class VirtualRadarServer(RadarService):
                         lon = acjsn['Long'] if 'Long' in acjsn and acjsn['Long'] else None
                         alt = acjsn['Alt'] if 'Alt' in acjsn and acjsn['Alt'] else None
                         callsign = acjsn['Call'] if 'Call' in acjsn and acjsn['Call'] else None
+                        track = acjsn['Trak'] if 'Trak' in acjsn and acjsn['Trak'] else None
 
                         if (lat and lon or alt) or (not filter_incomplete and callsign):
-                            flights.append((icao24, lat, lon, alt, callsign))
+                            flights.append(PositionReport(icao24, lat, lon, alt, track, callsign))
 
                     self.connection_alive = True
                     return flights

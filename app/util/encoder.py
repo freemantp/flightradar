@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from ..adsb.db.dbmodels import Flight, Position
 from ..adsb.aircraft import Aircraft
+from ..adsb.model.position_report import PositionReport
 
 class RadarJsonEncoder(json.JSONEncoder):
     def default(self, o):
@@ -29,5 +30,9 @@ class RadarJsonEncoder(json.JSONEncoder):
             return {'icao24': o.modes_hex, 'reg': o.reg, 'icaoType': o.type1, 'type': o.type2, 'op': o.operator }
 
         if isinstance(o, Position):
-            return [o.lat, o.lon, o.alt]       
+            return [o.lat, o.lon, o.alt]
+
+        if isinstance(o, PositionReport):
+            return [o.lat, o.lon, o.alt, o.track]
+
         return json.JSONEncoder.default(self, o)
