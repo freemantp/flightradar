@@ -3,6 +3,7 @@ import logging
 from time import sleep
 from datetime import datetime, timedelta
 from timeit import default_timer as timer
+from typing import List
 
 from ..util.singleton import Singleton
 
@@ -12,6 +13,7 @@ from .util.modes_util import ModesUtil
 from .db.dbmodels import Position, Flight, database_proxy as db
 from .db.dbrepository import DBRepository
 from ..config import Config
+from .model.position_report import PositionReport
 
 from peewee import IntegrityError
 from playhouse.sqliteq import ResultTimeout
@@ -47,7 +49,7 @@ class FlightUpdater(object):
         self._delete_after = config.DB_RETENTION_MIN
 
         # Lookup stuctures
-        self.modeS_flight_map = dict()
+        self.modeS_flightid_map = dict()
         self.flight_lastpos_map = dict()
         self.flight_last_contact = dict()
         self._initialize_from_db()
@@ -59,8 +61,8 @@ class FlightUpdater(object):
 
         timestamp = datetime.utcnow() - timedelta(minutes=1)
 
-        return { k:self.flight_lastpos_map.get(v) 
-                    for (k,v) in self.modeS_flight_map.items() 
+        return { v:self.flight_lastpos_map.get(v) 
+                    for (k,v) in self.modeS_flightid_map.items() 
                     if v in self.flight_lastpos_map and self.flight_last_contact[v] > timestamp }
 
     def cleanup_items(self):
@@ -75,7 +77,7 @@ class FlightUpdater(object):
                     DBRepository.delete_flights_and_positions([f.id for f in flights_to_delete])
 
                 for flight in flights_to_delete:
-                    self.modeS_flight_map.pop(flight.modeS, None)
+                    self.modeS_flightid_map.pop(flight.modeS, None)
                     self.flight_lastpos_map.pop(flight.id, None)
                     self.flight_last_contact.pop(flight.id, None)
                 deleted_msg = ', '.join(['{:d} (cs={})'.format(f.id, f.callsign) for f in flights_to_delete])
@@ -91,7 +93,7 @@ class FlightUpdater(object):
         recent_flight_timestamp = datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
         
         for pos_flights in DBRepository.get_recent_flights_last_pos(recent_flight_timestamp):
-            self.modeS_flight_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id
+            self.modeS_flightid_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id
             self.flight_lastpos_map[pos_flights.flight_fk.id] = (pos_flights.flight_fk.id, pos_flights.lat, pos_flights.lon, pos_flights.alt )
             self.flight_last_contact[pos_flights.flight_fk.id] = pos_flights.flight_fk.last_contact
 
@@ -139,7 +141,7 @@ class FlightUpdater(object):
             logger.warn('Took {:.2f}s to process flight data [db={:.2f}s, fl={:.2f}, pos={:.2f} service={:.2f}s] '
                 .format(execution_time.total_seconds(), db_delta.total_seconds(), flight_delta.total_seconds(), pos_delta.total_seconds(), service_delta.total_seconds()))
 
-    def add_positions(self, positions):
+    def add_positions(self, positions: List[PositionReport]):
         """ Inserts positions into the database"""
 
         # Create tuples suitable for DB insertion
@@ -147,52 +149,50 @@ class FlightUpdater(object):
 
         for pos in positions:
 
-            tpl = (self.modeS_flight_map[pos.icao24], pos.lat, pos.lon, pos.alt)
+            flight_id = self.modeS_flightid_map[pos.icao24]
+            db_tpl = (flight_id, pos.lat, pos.lon, pos.alt)
 
             # If position is the same as last time, filter it
-            if tpl[0] not in self.flight_lastpos_map or (tpl[0] in self.flight_lastpos_map and self.flight_lastpos_map[tpl[0]] != tpl):
-
-                db_tuples.append(tpl)
-                self.flight_lastpos_map[tpl[0]] = pos
-                self.flight_last_contact[tpl[0]] = datetime.utcnow()
+            if flight_id not in self.flight_lastpos_map or (flight_id in self.flight_lastpos_map and self.flight_lastpos_map[flight_id] != pos):                                
+                self.flight_last_contact[flight_id] = datetime.utcnow()
+                self.flight_lastpos_map[flight_id] = pos
+                db_tuples.append(db_tpl)
 
         # Insert new
         if db_tuples:
-            fields = [Position.flight_fk, Position.lat,
-                      Position.lon, Position.alt]
+            fields = [Position.flight_fk, Position.lat, Position.lon, Position.alt]
 
             with db.atomic() as transaction:
                 for i in range(0, len(db_tuples), self._insert_batch_size):
                     Position.insert_many(
                         db_tuples[i:i+self._insert_batch_size], fields=fields).execute()
 
-    def update_flights(self, flights):
+    def update_flights(self, flights: List[PositionReport]):
         """ Inserts and updates  flights in the database"""
 
         inserted_flights = []
         updated_flights = []
 
         with db.atomic() as transaction:
-
-            # (modeS, callsign), None for a callsign is allowed
-            for modeS_callsgn in [(f.icao24, f.callsign) for f in flights]:
+     
+            for f in flights:
 
                 # create a new flight even if other flights in db match modes/callsign, but too much time elapsed since last position report
                 thresh_timestmp = self._threshold_timestamp()
 
                 flight_result = (Flight.select(Flight.id, Flight.modeS, Flight.callsign)
-                                .where(Flight.modeS == modeS_callsgn[0], Flight.last_contact > thresh_timestmp))
-
+                                .where(Flight.modeS == f.icao24, Flight.last_contact > thresh_timestmp))
+            
                 if flight_result:
-                    if modeS_callsgn[1] and not flight_result[0].callsign:
-                        self.update_callsign(modeS_callsgn[1], flight_result[0].id)
-                        updated_flights.append(modeS_callsgn)
+                    if f.callsign and not flight_result[0].callsign:
+                        self.update_callsign(f.callsign, flight_result[0].id)
+                        updated_flights.append((f.icao24, f.callsign))
 
-                    if not modeS_callsgn[0] in self.modeS_flight_map:
-                         self.modeS_flight_map[modeS_callsgn[0]] = flight_result[0].id
+                    if not f.icao24 in self.modeS_flightid_map:
+                         self.modeS_flightid_map[f.icao24] = flight_result[0].id
                 else:
-                    self.insert_flight(modeS_callsgn)
-                    inserted_flights.append(modeS_callsgn)
+                    self.insert_flight(f.icao24, f.callsign)
+                    inserted_flights.append((f.icao24, f.callsign))
                     
 
         if inserted_flights:
@@ -203,9 +203,9 @@ class FlightUpdater(object):
             updated_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in updated_flights])
             logger.info('Updated {:s}'.format(updated_msg))
 
-    def insert_flight(self, modeS_callsgn):
-        flight_id = Flight.insert(modeS=modeS_callsgn[0], callsign=modeS_callsgn[1]).execute()
-        self.modeS_flight_map[modeS_callsgn[0]] = flight_id
+    def insert_flight(self, icao24, callsign):
+        flight_id = Flight.insert(modeS=icao24, callsign=callsign).execute()
+        self.modeS_flightid_map[icao24] = flight_id
 
 
     def update_callsign(self, callsign, flight_id):        

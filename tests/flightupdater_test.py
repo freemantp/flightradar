@@ -76,13 +76,13 @@ class FlightUpdaterTest(DbBaseTestCase):
 
         self.assertEqual(0, Position.select().count())
         self.assertEqual(0, Flight.select().count())
-        self.assertFalse(self.sut.modeS_flight_map)
+        self.assertFalse(self.sut.modeS_flightid_map)
         self.assertFalse(self.sut.flight_lastpos_map)
 
     def test_initialize_db(self):
         """ Test initialization from db"""
 
-        self.assertFalse(self.sut.modeS_flight_map)
+        self.assertFalse(self.sut.modeS_flightid_map)
         self.assertFalse(self.sut.flight_lastpos_map)
 
         id1 = Flight.insert(modeS='4B2241',callsign='CLLSGN').execute()
@@ -92,8 +92,8 @@ class FlightUpdaterTest(DbBaseTestCase):
 
         self.sut._initialize_from_db()
         
-        self.assertEqual(id1, self.sut.modeS_flight_map['4B2241'])
-        self.assertEqual(id2, self.sut.modeS_flight_map['F1A2C0'])
+        self.assertEqual(id1, self.sut.modeS_flightid_map['4B2241'])
+        self.assertEqual(id2, self.sut.modeS_flightid_map['F1A2C0'])
         self.assertEqual((id1,41.1,60.1,1723), self.sut.flight_lastpos_map[id1])
         self.assertEqual((id2,44.1,63.1,1923), self.sut.flight_lastpos_map[id2])
 
