@@ -102,7 +102,8 @@ class Config:
                 pass
         if os.environ.get(ENV_LOGGING_CONFIG):
             try:
-                self.LOGGING_CONFIG = LoggingConfig.from_json(os.environ.get(ENV_LOGGING_CONFIG))
+                logging_json = json.loads(os.environ.get(ENV_LOGGING_CONFIG))
+                self.LOGGING_CONFIG = LoggingConfig.from_json(logging_json)
             except ValueError as e:
                 logging.getLogger().error(e)
         self.config_src = ConfigSource.ENV

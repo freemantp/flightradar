@@ -1,7 +1,7 @@
 import unittest
 from test import support
 
-from app.config import Config, ConfigSource
+from app.config import Config, ConfigSource. LoggingConfig
 
 
 class ConfigTest(unittest.TestCase):
@@ -15,7 +15,8 @@ class ConfigTest(unittest.TestCase):
             env.set('SERVICE_TYPE','srvtype')
             env.set('MIL_ONLY','true')
             env.set('DB_RETENTION_MIN','999')
-            env.set('UNKNOWN_AIRCRAFT_CRAWLING','true')           
+            env.set('UNKNOWN_AIRCRAFT_CRAWLING','true')
+            env.set('LOGGING_CONFIG', '{\"syslogHost\":\"log.server.com\",\"syslogFormat\":\"logformat:[%(name)s]%(message)s\",\"logLevel\":\"INFO\",\"logToConsole\":true}')      
 
             config = Config('/path/tononexistent.json')
             self.assertEqual(ConfigSource.ENV, config.config_src)
@@ -25,5 +26,6 @@ class ConfigTest(unittest.TestCase):
             self.assertEqual(True, config.MILTARY_ONLY)
             self.assertEqual(999, config.DB_RETENTION_MIN)
             self.assertEqual(True, config.UNKNOWN_AIRCRAFT_CRAWLING)
+            self.assertTrue(isinstance(config.LOGGING_CONFIG, LoggingConfig) )
 
     
