@@ -29,7 +29,7 @@ class SecretBasesUk:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
-        self.timeout = 10
+        self.timeout = 5.0
         self.maxretires = 5
         self.modes_util = ModesUtil(config_folder)
 
@@ -49,7 +49,7 @@ class SecretBasesUk:
         try:
 
             url = 'https://www.secret-bases.co.uk/aircraft/{:s}'.format(mode_s_hex)
-            response = requests.get(url, headers=self.headers)            
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)            
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')

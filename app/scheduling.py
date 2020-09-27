@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 UPDATER_JOB_NAME = 'flight_updater_job'
 
 def create_updater(config):    
-    updater = FlightUpdater.Instance()
+    updater = FlightUpdater()
     updater.initialize(config)
     return updater
 
@@ -34,7 +34,7 @@ def configure_scheduling(app: Flask, conf: Config):
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
-    @scheduler.task('interval', id=UPDATER_JOB_NAME, seconds=1, misfire_grace_time=3, coalesce=True)
+    @scheduler.task('interval', id=UPDATER_JOB_NAME, seconds=0.2, misfire_grace_time=3, coalesce=True)
     def update_flights():
         with app.app_context():
             app.updater.update()

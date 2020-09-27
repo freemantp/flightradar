@@ -4,7 +4,7 @@ import logging
 import requests
 from typing import List
 from ..model.position_report import PositionReport
-from requests.exceptions import HTTPError
+from requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class ModeSMixer(RadarService):
             msg_body = self._get_request_body(force_initial)
 
             url = RadarService._urljoin(self.base_path, 'json')
-            response = self.session.post(url, json=msg_body, headers=self.headers)
+            response = self.session.post(url, json=msg_body, headers=self.headers, timeout=1.0)
             response.raise_for_status()
 
             json_obj = response.json()
@@ -48,8 +48,8 @@ class ModeSMixer(RadarService):
             self.connection_alive = True
             return flights
 
-        except HTTPError as http_err:
-            logger.error("[ModeSMixer]: {:s}".format(str(http_err)))
+        except RequestException as req_excpt:
+            logger.error("[ModeSMixer]: {:s}".format(str(req_excpt)))            
 
         return None
 

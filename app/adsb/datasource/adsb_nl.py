@@ -23,8 +23,7 @@ class AdsbNL:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
-        self.timeout = 10
-        self.maxretires = 5
+        self.timeout = 5.0
         self.modes_util = ModesUtil(config_folder)
 
     @staticmethod
@@ -53,7 +52,7 @@ class AdsbNL:
         try:
             url = 'http://www.ads-b.nl/aircraft.php?id_aircraft={:d}'.format(int(mode_s_hex, 16))
 
-            response = requests.get(url, headers=self.headers)            
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)            
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')

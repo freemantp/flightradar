@@ -5,8 +5,6 @@ from datetime import datetime, timedelta
 from timeit import default_timer as timer
 from typing import List
 
-from ..util.singleton import Singleton
-
 from .datasource.modesmixer import ModeSMixer
 from .datasource.virtualradarserver import VirtualRadarServer
 from .util.modes_util import ModesUtil
@@ -22,9 +20,7 @@ from .util.logging import LOGGER_NAME
 
 logger = logging.getLogger('Updater')
 
-#TODO: Why singleton?
-@Singleton
-class FlightUpdater(object):
+class FlightUpdater:
 
     MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT = 10
 

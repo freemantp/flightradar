@@ -33,7 +33,7 @@ class BazlLFR:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'de,en-US;q=0.7,en;q=0.3'
         }
-        self.timeout = 10
+        self.timeout = 5.0
         self.maxretires = 5
 
     @staticmethod
@@ -66,7 +66,7 @@ class BazlLFR:
             }
 
             url = 'https://app02.bazl.admin.ch/web/bazl-backend/lfr'
-            response = requests.post(url, json=post_body, headers=self.headers)            
+            response = requests.post(url, json=post_body, headers=self.headers, timeout=self.timeout)            
             response.raise_for_status()
 
             response_body = response.json()

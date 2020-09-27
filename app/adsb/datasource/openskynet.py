@@ -22,7 +22,7 @@ class OpenskyNet:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
-        self.timeout = 10
+        self.timeout = 5.0
         self.maxretires = 5
 
     @staticmethod
@@ -38,7 +38,7 @@ class OpenskyNet:
         try:
             
             url = 'https://opensky-network.org/api/metadata/aircraft/icao/{:s}'.format(mode_s_hex)
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)
 
             if response.status_code == requests.codes.not_found:
                 return None

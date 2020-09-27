@@ -20,6 +20,7 @@ class Flightradar24:
             "Accept-Language": "de,en-US;q=0.7,en;q=0.3"
         }
         self.maxretires = 5
+        self.timeout = 5.0
         self.failcounter = 0
 
     @staticmethod
@@ -56,7 +57,7 @@ class Flightradar24:
             try:
 
                 url = 'https://api.flightradar24.com/common/v1/search.json?fetchBy=reg&query={:s}'.format(mode_s_hex)
-                response = requests.get(url, headers=self.headers)            
+                response = requests.get(url, headers=self.headers, timeout=self.timeout)            
 
 
 
