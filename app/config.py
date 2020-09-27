@@ -83,6 +83,7 @@ class Config:
         ENV_MIL_ONLY = 'MIL_ONLY'
         ENV_DB_RETENTION_MIN = 'DB_RETENTION_MIN'
         ENV_UNKNOWN_AIRCRAFT_CRAWLING = 'UNKNOWN_AIRCRAFT_CRAWLING'
+        ENV_LOGGING_CONFIG = 'LOGGING_CONFIG'
 
         if os.environ.get(ENV_DATA_FOLDER):
             self.DATA_FOLDER = os.environ.get(ENV_DATA_FOLDER)
@@ -99,7 +100,11 @@ class Config:
                 self.DB_RETENTION_MIN = int(os.environ.get(ENV_DB_RETENTION_MIN))
             except ValueError:
                 pass
-
+        if os.environ.get(ENV_LOGGING_CONFIG):
+            try:
+                self.LOGGING_CONFIG = LoggingConfig.from_json(os.environ.get(ENV_LOGGING_CONFIG))
+            except ValueError as e:
+                logging.getLogger().error(e)
         self.config_src = ConfigSource.ENV
 
     def from_file(self, filename):
