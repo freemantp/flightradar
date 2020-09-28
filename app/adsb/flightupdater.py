@@ -132,7 +132,7 @@ class FlightUpdater:
         flight_delta = timedelta(seconds=flight_end_time-end_service_time)
         pos_delta = timedelta(seconds=pos_end_time-flight_end_time)
 
-        logger.info('Processed flight data in {:.2f}s, db={:.2f}s, fl={:.2f}, pos={:.2f} service={:.2f}s '
+        logger.info('Processed flight data in {:.2f}s, db={:.2f}s, fl={:.2f}, pos={:.2f}, service={:.2f}s '
             .format(execution_time.total_seconds(), db_delta.total_seconds(), flight_delta.total_seconds(), pos_delta.total_seconds(), service_delta.total_seconds()))
 
     def add_positions(self, positions: List[PositionReport]):
