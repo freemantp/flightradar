@@ -127,13 +127,18 @@ class FlightUpdater:
         end_time = timer()
         execution_time = timedelta(seconds=end_time-start_time)
 
-        service_delta = timedelta(seconds=end_service_time-start_time)
-        db_delta = timedelta(seconds=end_time-end_service_time)
-        flight_delta = timedelta(seconds=flight_end_time-end_service_time)
-        pos_delta = timedelta(seconds=pos_end_time-flight_end_time)
+        if execution_time > timedelta(seconds=1) or True: #TODO: Reactivate check
+            service_delta = timedelta(seconds=end_service_time-start_time)
+            db_delta = timedelta(seconds=end_time-end_service_time)
+            flight_delta = timedelta(seconds=flight_end_time-end_service_time)
+            pos_delta = timedelta(seconds=pos_end_time-flight_end_time)
 
-        logger.info('Processed flight data in {:.2f}s, db={:.2f}s, fl={:.2f}, pos={:.2f}, service={:.2f}s '
-            .format(execution_time.total_seconds(), db_delta.total_seconds(), flight_delta.total_seconds(), pos_delta.total_seconds(), service_delta.total_seconds()))
+            timing_info = {'total_time_ms': execution_time.total_seconds() * 1000, 
+                           'db_time_ms': db_delta.total_seconds() * 1000,
+                           'service_time_ms': service_delta.total_seconds() * 1000
+                           }
+
+            logger.info('Flight data processing time total={:.2f}ms, service={:.2f}ms'.format(timing_info['total_time_ms'], timing_info['service_time_ms']), extra=timing_info)
 
     def add_positions(self, positions: List[PositionReport]):
         """ Inserts positions into the database"""

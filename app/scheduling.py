@@ -31,8 +31,6 @@ def configure_scheduling(app: Flask, conf: Config):
     def my_listener(event):
         if event.code == EVENT_JOB_MAX_INSTANCES and event.job_id == UPDATER_JOB_NAME:
             logger.warn('Updater could not be started, previous is still running')
-        else:
-            logger.warn(event)
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
