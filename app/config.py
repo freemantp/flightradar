@@ -10,21 +10,20 @@ class LoggingConfig:
 
     syslogHost = None
     syslogFormat = None
-    logLevel = logging.INFO
     logToConsole = True
 
     @staticmethod
     def from_json(json):
-        syslogHost = json['syslogHost']
-        syslogFormat = json['syslogFormat']
         logToConsole = True
         logLevel = logging.INFO
-
-        if not syslogHost or not syslogFormat:
-            raise ValueError('Incomplete logging config')     
-
+        syslogHost = json['syslogHost'] if 'syslogHost' in json else None
+        syslogFormat = json['syslogFormat'] if 'syslogFormat' in json else None
+        
         if 'logLevel' in json:
             logLevel = logging.getLevelName(json['logLevel'].strip().upper())
+
+        if bool(syslogHost) != bool(syslogFormat):
+            raise ValueError('Incomplete logging config')     
 
         if 'logToConsole' in json:
             logToConsole = json['logToConsole']

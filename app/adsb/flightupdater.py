@@ -77,7 +77,7 @@ class FlightUpdater:
                     self.flight_lastpos_map.pop(flight.id, None)
                     self.flight_last_contact.pop(flight.id, None)
                 deleted_msg = ', '.join(['{:d} (cs={})'.format(f.id, f.callsign) for f in flights_to_delete])
-                logger.info('Deleted {:s}'.format(deleted_msg))
+                logger.info('aircraftEvent=delete {:s}'.format(deleted_msg))
 
     def _threshold_timestamp(self):
         return datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
@@ -127,15 +127,13 @@ class FlightUpdater:
         end_time = timer()
         execution_time = timedelta(seconds=end_time-start_time)
 
-        if execution_time > timedelta(seconds=1):
+        service_delta = timedelta(seconds=end_service_time-start_time)
+        db_delta = timedelta(seconds=end_time-end_service_time)
+        flight_delta = timedelta(seconds=flight_end_time-end_service_time)
+        pos_delta = timedelta(seconds=pos_end_time-flight_end_time)
 
-            service_delta = timedelta(seconds=end_service_time-start_time)
-            db_delta = timedelta(seconds=end_time-end_service_time)
-            flight_delta = timedelta(seconds=flight_end_time-end_service_time)
-            pos_delta = timedelta(seconds=pos_end_time-flight_end_time)
-
-            logger.warn('Took {:.2f}s to process flight data [db={:.2f}s, fl={:.2f}, pos={:.2f} service={:.2f}s] '
-                .format(execution_time.total_seconds(), db_delta.total_seconds(), flight_delta.total_seconds(), pos_delta.total_seconds(), service_delta.total_seconds()))
+        logger.info('Processed flight data in {:.2f}s, db={:.2f}s, fl={:.2f}, pos={:.2f} service={:.2f}s '
+            .format(execution_time.total_seconds(), db_delta.total_seconds(), flight_delta.total_seconds(), pos_delta.total_seconds(), service_delta.total_seconds()))
 
     def add_positions(self, positions: List[PositionReport]):
         """ Inserts positions into the database"""
@@ -193,11 +191,11 @@ class FlightUpdater:
 
         if inserted_flights:
             inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in inserted_flights])
-            logger.info('Inserted {:s}'.format(inserted_msg))
+            logger.info('aircraftEvent=insert {:s}'.format(inserted_msg))
 
         if updated_flights:
             updated_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in updated_flights])
-            logger.info('Updated {:s}'.format(updated_msg))
+            logger.info('aircraftEvent=update {:s}'.format(updated_msg))
 
     def insert_flight(self, icao24, callsign):
         flight_id = Flight.insert(modeS=icao24, callsign=callsign).execute()

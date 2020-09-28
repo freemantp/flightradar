@@ -39,7 +39,7 @@ class ModeSMixer(RadarService):
             msg_body = self._get_request_body(force_initial)
 
             url = RadarService._urljoin(self.base_path, 'json')
-            response = self.session.post(url, json=msg_body, headers=self.headers, timeout=1.0)
+            response = self.session.post(url, json=msg_body, headers=self.headers, timeout=2.0)
             response.raise_for_status()
 
             json_obj = response.json()

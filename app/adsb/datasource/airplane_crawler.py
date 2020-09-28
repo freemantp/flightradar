@@ -87,7 +87,7 @@ class AirplaneCrawler:
                                 aircraft_db.merge(aircraft_response)
                                 if self.bs_db.update_aircraft(aircraft_db):
                                     self.update_count += 1
-                                    logger.info('[ Update ] {:s}'.format(str(aircraft_db)))
+                                    logger.info('Updated {:s}'.format(str(aircraft_db)))
                             else:
                                 self.not_found.add(modeS)
 
@@ -99,7 +99,7 @@ class AirplaneCrawler:
                             if aircraft_response:
                                 if self.bs_db.insert_aircraft(aircraft_response):
                                     self.insert_count += 1
-                                    logger.info('[ Inserted ] {:s}'.format(str(aircraft_response)))
+                                    logger.info('Inserted {:s}'.format(str(aircraft_response)))
                     except (KeyboardInterrupt, SystemExit):
                         raise
                     except:
