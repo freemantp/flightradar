@@ -77,6 +77,9 @@ class Flightradar24:
                 elif response.status_code == requests.codes.payment:                    
                     logger.warn('HTTP 402 - Payment Required')
                     self._fail_and_sleep()
+                elif response.status_code == requests.codes.too_many:                    
+                    logger.warn('HTTP 429 - Too many requests')
+                    self._fail_and_sleep()                    
                 elif response.status_code >= 500 and response.status_code < 600:
                      self._fail_and_sleep()              
                 else:
@@ -86,6 +89,8 @@ class Flightradar24:
 
                 if http_err.response.status_code_code == requests.codes.payment:
                     logger.warn('HTTP 402 - Payment Required')            
+                if http_err.response.status_code_code == requests.codes.too_many:
+                    logger.warn('HTTP 429 - Too many requests00')                            
                 else:
                     logger.exception(http_err)
                 self._fail_and_sleep()

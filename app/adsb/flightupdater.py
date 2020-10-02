@@ -127,7 +127,7 @@ class FlightUpdater:
         end_time = timer()
         execution_time = timedelta(seconds=end_time-start_time)
 
-        if execution_time > timedelta(seconds=0.2):
+        if execution_time > timedelta(seconds=0.5):
             service_delta = timedelta(seconds=end_service_time-start_time)
             db_delta = timedelta(seconds=end_time-end_service_time)
             flight_delta = timedelta(seconds=flight_end_time-end_service_time)
