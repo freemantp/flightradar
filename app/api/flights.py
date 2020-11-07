@@ -27,18 +27,23 @@ def ready():
 def get_flights():
     try:
         limit = request.args.get('limit', default = None, type = int)
+        filter = request.args.get('filter', default = None, type = str)
 
-        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
                             .order_by(Flight.last_contact.desc()).limit(limit))
 
-        return jsonify([f for f in result_set])
+        if filter == 'mil':
+            return jsonify([f for f in result_set if app.modes_util.is_military(f.modeS)])
+        else:
+            return jsonify([f for f in result_set])
+
     except ValueError:
         raise ValidationError('invalid arguments')
 
 @api.route('/flights/<flight_id>')
 def get_flight(flight_id):
     try:
-        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact)
+        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
                             .where(Flight.id == flight_id)
                             .order_by(Flight.last_contact.desc()).limit(1))
 

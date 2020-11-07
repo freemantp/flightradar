@@ -42,6 +42,8 @@ class AirplaneCrawler:
 
         assert self.bs_db
 
+        #TODO: use app.modes_util instead of instantiating it for each source
+
         self.sources = [BazlLFR(), 
             OpenskyNet(), 
             AdsbNL(config.DATA_FOLDER),

@@ -8,6 +8,7 @@ from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db
 from .adsb.util.logging import init_logging
 from .util.encoder import RadarJsonEncoder
+from .adsb.util.modes_util import ModesUtil
 
 from .scheduling import configure_scheduling
 
@@ -34,6 +35,7 @@ def create_app():
 
     app.metaInfo = MetaInformation()
     app.flight_db = init_db(conf.DATA_FOLDER)
+    app.modes_util = ModesUtil(conf.DATA_FOLDER)
 
     app.json_encoder = RadarJsonEncoder
 

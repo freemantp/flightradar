@@ -24,7 +24,7 @@ class RadarJsonEncoder(json.JSONEncoder):
             return float(o)
 
         if isinstance(o, Flight):
-            return {'id': o.id, 'icao24': o.modeS, 'cls': o.callsign, 'lstCntct': o.last_contact }
+            return {'id': o.id, 'icao24': o.modeS, 'cls': o.callsign, 'lstCntct': o.last_contact, 'firstCntct': o.first_contact }
 
         if isinstance(o, Aircraft):
             return {'icao24': o.modes_hex, 'reg': o.reg, 'icaoType': o.type1, 'type': o.type2, 'op': o.operator }
