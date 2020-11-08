@@ -77,8 +77,14 @@ def get_positions(flight_id):
 @api.route('/positions') 
 def get_all_positions():
     archived = get_boolean_arg('archived')
+    filter = request.args.get('filter', default = None, type = str)
+
     positions = DBRepository.get_all_positions(archived)
-    return jsonify(positions)
+
+    if filter == 'mil':
+        return jsonify({key:value for (key,value) in positions.items() if app.modes_util.is_military(key)})
+    else:
+        return jsonify(positions) 
 
 
 @api.after_request
