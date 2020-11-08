@@ -30,7 +30,7 @@ def get_flights():
         filter = request.args.get('filter', default = None, type = str)
 
         result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                            .order_by(Flight.last_contact.desc()).limit(limit))
+                            .order_by(Flight.first_contact.desc()).limit(limit))
 
         if filter == 'mil':
             return jsonify([f for f in result_set if app.modes_util.is_military(f.modeS)])
