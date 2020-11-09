@@ -1,6 +1,7 @@
 import unittest
 import time
 from typing import List
+from flask import Flask
 
 from app.adsb.flightupdater import FlightUpdater
 from app.adsb.db.dbmodels import Position, Flight
@@ -17,6 +18,11 @@ class MockRadarService:
     def query_live_flights(self, incomplete) -> List[PositionReport]:
         return self.flights
 
+class MockModeSUtil:
+
+    def is_military(self, modeS):
+        return False
+
 
 class FlightUpdaterTest(DbBaseTestCase):
 
@@ -26,6 +32,15 @@ class FlightUpdaterTest(DbBaseTestCase):
         self.sut.initialize(Config())
         self.sut._mil_only = False
         self.sut._service = MockRadarService()
+
+        self.app = Flask('test')
+
+        def is_military_func(modeS):
+            return False
+
+        self.app.modes_util = MockModeSUtil()
+
+        print('dsfdf')
 
     def tearDown(self):
         DbBaseTestCase.tearDown(self)
@@ -37,7 +52,8 @@ class FlightUpdaterTest(DbBaseTestCase):
             PositionReport('12345', 44.1, 63.1, 1723, 321, None),
         ]
 
-        self.sut.update()
+        with self.app.app_context():
+            self.sut.update()
 
         self.assertEqual(1, Flight.select().count())
         self.assertEqual('CLLSGN', Flight.select().first().callsign)
@@ -50,13 +66,14 @@ class FlightUpdaterTest(DbBaseTestCase):
             PositionReport('12345', 44.1, 63.1, 1723, 321, None)
         ]
 
-        self.sut.update()
+        with self.app.app_context():
+            self.sut.update()
 
-        self.sut._service.flights = [
-            PositionReport('12345', 44.1, 63.1, 1723, 321, None)
-        ]
+            self.sut._service.flights = [
+                PositionReport('12345', 44.1, 63.1, 1723, 321, None)
+            ]
 
-        self.sut.update()
+            self.sut.update()
 
         self.assertEqual(2, Position.select().count())
 

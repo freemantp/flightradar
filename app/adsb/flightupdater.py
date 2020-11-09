@@ -203,7 +203,11 @@ class FlightUpdater:
             logger.info('aircraftEvent=update {:s}'.format(updated_msg))
 
     def insert_flight(self, icao24, callsign):
-        flight_id = Flight.insert(modeS=icao24, callsign=callsign).execute()
+
+        from flask import current_app as app
+        is_military = app.modes_util.is_military(icao24)
+
+        flight_id = Flight.insert(modeS=icao24, callsign=callsign, is_military=is_military).execute()
         self.modeS_flightid_map[icao24] = flight_id
 
 

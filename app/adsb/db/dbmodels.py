@@ -14,12 +14,14 @@ class Flight(BaseModel):
     id = AutoField
     callsign = CharField(null = True)
     modeS = FixedCharField(max_length=6, index=True)
+    is_military = BooleanField(default=False)
     archived = BooleanField(default=False)
     first_contact = DateTimeField(default=datetime.datetime.utcnow)
     last_contact = DateTimeField(default=datetime.datetime.utcnow)
 
     def __str__(self):
-        return 'Flight id={:d}, callsign={:s}, modeS={:s}, archived={:s}, last_contact={:s}'.format( self.id, str(self.callsign), str(self.modeS), str(self.archived), str(self.last_contact) )
+        return 'Flight id={:d}, callsign={:s}, modeS={:s} [{:s}], archived={:s}, last_contact={:s}'.format( \
+            self.id, str(self.callsign), str(self.modeS), 'mil' if self.is_military else 'civ', str(self.archived), str(self.last_contact) )
 
 class Position(BaseModel):
     flight_fk = ForeignKeyField(Flight, backref='positions')

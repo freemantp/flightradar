@@ -26,15 +26,21 @@ def ready():
 @api.route('/flights')
 def get_flights():
     try:
-        limit = request.args.get('limit', default = None, type = int)
-        filter = request.args.get('filter', default = None, type = str)
 
-        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                            .order_by(Flight.first_contact.desc()).limit(limit))
+        
+        filter = request.args.get('filter', default = None, type = str)
+        limit = request.args.get('limit', default = None, type = int)
 
         if filter == 'mil':
-            return jsonify([f for f in result_set if app.modes_util.is_military(f.modeS)])
+            result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
+                    .where(Flight.is_military == True)
+                    .order_by(Flight.first_contact.desc()).limit(limit))
+
+            return jsonify([f for f in result_set])
         else:
+            result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
+                    .order_by(Flight.first_contact.desc()).limit(limit))
+
             return jsonify([f for f in result_set])
 
     except ValueError:
