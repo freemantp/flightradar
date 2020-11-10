@@ -39,8 +39,7 @@ class FlightUpdaterTest(DbBaseTestCase):
             return False
 
         self.app.modes_util = MockModeSUtil()
-
-        print('dsfdf')
+        self.app.modes_util.is_military = is_military_func
 
     def tearDown(self):
         DbBaseTestCase.tearDown(self)
@@ -66,14 +65,13 @@ class FlightUpdaterTest(DbBaseTestCase):
             PositionReport('12345', 44.1, 63.1, 1723, 321, None)
         ]
 
-        with self.app.app_context():
-            self.sut.update()
+        self.sut.update()
 
-            self.sut._service.flights = [
-                PositionReport('12345', 44.1, 63.1, 1723, 321, None)
-            ]
+        self.sut._service.flights = [
+            PositionReport('12345', 44.1, 63.1, 1723, 321, None)
+        ]
 
-            self.sut.update()
+        self.sut.update()
 
         self.assertEqual(2, Position.select().count())
 
