@@ -5,15 +5,10 @@ from .openskynet import OpenskyNet
 from .militarymodes_eu import MilitaryModeS
 from .secret_base import SecretBasesUk
 from .modesmixer import ModeSMixer
-from .virtualradarserver import VirtualRadarServer
 from ..db.basestationdb import BaseStationDB
 from ..util.tabular import Tabular
 from ..util.logging import init_logging
 
-import time
-import signal
-import sys
-import json
 import logging
 from os import path
 
@@ -59,6 +54,8 @@ class AirplaneCrawler:
     def query_modes(self, modeS_address):
 
         aircraft = None
+
+        logger.info("query_modes")
 
         for s in self.sources:
             if s.accept(modeS_address):

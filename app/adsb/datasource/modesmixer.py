@@ -1,5 +1,4 @@
 from .radarservice import RadarService
-import json
 import logging
 import requests
 from typing import List
@@ -20,6 +19,9 @@ class ModeSMixer(RadarService):
         self.epoch = 0
         self.session = requests.Session()
 
+        
+        self.urllib3logger = logging.getLogger('urllib3.response')        
+
     def _get_request_body(self, force_initial):
 
         if force_initial:
@@ -36,6 +38,10 @@ class ModeSMixer(RadarService):
     def get_flight_info(self, force_initial=False):
 
         try:
+            # Workaround: urllib3 complains about modesmixer2's response headers, disable warnings for this request 
+            if self.urllib3logger:
+                self.urllib3logger.setLevel(logging.ERROR)
+
             msg_body = self._get_request_body(force_initial)
 
             url = RadarService._urljoin(self.base_path, 'json')
@@ -46,10 +52,14 @@ class ModeSMixer(RadarService):
             flights = json_obj['stats']['flights']
             self.epoch = json_obj['stats']['epoch']
             self.connection_alive = True
+
             return flights
 
         except RequestException as req_excpt:
-            logger.error("[ModeSMixer]: {:s}".format(str(req_excpt)))            
+            logger.error("[ModeSMixer]: {:s}".format(str(req_excpt)))
+        finally:
+            if self.urllib3logger:
+                self.urllib3logger.setLevel(logging.DEBUG)
 
         return None
 
