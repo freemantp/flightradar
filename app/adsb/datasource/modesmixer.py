@@ -38,8 +38,6 @@ class ModeSMixer(RadarService):
     def get_flight_info(self, force_initial=False):
 
         try:
-            # Workaround: urllib3 complains about modesmixer2's response headers, disable warnings for this request 
-
             msg_body = self._get_request_body(force_initial)
 
             url = RadarService._urljoin(self.base_path, 'json')

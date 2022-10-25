@@ -10,9 +10,11 @@ def disable_urllibs_response_warnings(func):
             if urllib3logger:
                 urllib3logger.setLevel(logging.ERROR)
         
-            return func(*args, **kwargs)
+            response = func(*args, **kwargs)            
         finally:
             if urllib3logger:
                 urllib3logger.setLevel(logging.WARN)
+
+        return response
 
     return wrap
