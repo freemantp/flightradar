@@ -55,8 +55,6 @@ class AirplaneCrawler:
 
         aircraft = None
 
-        logger.info("query_modes")
-
         for s in self.sources:
             if s.accept(modeS_address):
                 aircraft = s.query_aircraft(modeS_address)

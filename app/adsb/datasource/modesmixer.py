@@ -1,7 +1,9 @@
-from .radarservice import RadarService
+
 import logging
 import requests
 from typing import List
+from .radarservice import RadarService
+from ..util.request_util import disable_urllibs_response_warnings
 from ..model.position_report import PositionReport
 from requests.exceptions import RequestException
 
@@ -17,10 +19,7 @@ class ModeSMixer(RadarService):
 
         self.headers['Content-type'] = 'application/json'
         self.epoch = 0
-        self.session = requests.Session()
-
-        
-        self.urllib3logger = logging.getLogger('urllib3.response')        
+        self.session = requests.Session()     
 
     def _get_request_body(self, force_initial):
 
@@ -35,12 +34,11 @@ class ModeSMixer(RadarService):
             }
         }
 
+    @disable_urllibs_response_warnings #modesmixer2 returns RFC 7230 incompliant response headers
     def get_flight_info(self, force_initial=False):
 
         try:
             # Workaround: urllib3 complains about modesmixer2's response headers, disable warnings for this request 
-            if self.urllib3logger:
-                self.urllib3logger.setLevel(logging.ERROR)
 
             msg_body = self._get_request_body(force_initial)
 
@@ -57,9 +55,6 @@ class ModeSMixer(RadarService):
 
         except RequestException as req_excpt:
             logger.error("[ModeSMixer]: {:s}".format(str(req_excpt)))
-        finally:
-            if self.urllib3logger:
-                self.urllib3logger.setLevel(logging.DEBUG)
 
         return None
 
@@ -77,6 +72,7 @@ class ModeSMixer(RadarService):
         else:
             return None
 
+    @disable_urllibs_response_warnings #modesmixer2 returns RFC 7230 incompliant response headers
     def query_live_flights(self, filter_incomplete=True) -> List[PositionReport]:
         """ 
         Retrieve active Mode-S adresses with current properties
