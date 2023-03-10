@@ -17,7 +17,6 @@ class BaseStationDB:
     def __del__(self):
         self.cur.close()
         self.conn.close()
-        logger.info('Database connection closed')
 
     def query_aircraft(self, icao24addr):
         self.cur.execute("SELECT Registration, ICAOTypeCode, Type, RegisteredOwners FROM Aircraft where ModeS = (?)", (icao24addr.strip(),))

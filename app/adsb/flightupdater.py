@@ -7,6 +7,7 @@ from typing import List
 
 from .datasource.modesmixer import ModeSMixer
 from .datasource.virtualradarserver import VirtualRadarServer
+from .datasource.dump1090 import Dump1090
 from .util.modes_util import ModesUtil
 from .db.dbmodels import Position, Flight, database_proxy as db
 from .db.dbrepository import DBRepository
@@ -33,6 +34,8 @@ class FlightUpdater:
             self._service = ModeSMixer(config.RADAR_SERVICE_URL)
         elif config.RADAR_SERVICE_TYPE == 'vrs':
             self._service = VirtualRadarServer(config.RADAR_SERVICE_URL)
+        elif config.RADAR_SERVICE_TYPE == 'dmp1090':
+            self._service = Dump1090(config.RADAR_SERVICE_URL)            
         else:
             raise ValueError('Service type not specified in config')
 
@@ -118,7 +121,7 @@ class FlightUpdater:
             self.cleanup_items()
 
         except ResultTimeout:
-            logger.info('Database timeout')
+            logger.error('Database timeout')
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
