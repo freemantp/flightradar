@@ -73,11 +73,11 @@ class Dump1090(RadarService):
   
                 if ('lat' in flight and 'lon' in flight) or 'flight' in flight:
 
-                    icao24 = str(flight['hex'])
+                    icao24 = flight['hex'].strip()
                     lat = flight['lat'] if 'lat' in flight and flight['lat'] else None
                     lon = flight['lon'] if 'lon' in flight and flight['lon'] else None
                     alt = flight['alt_geom'] if 'alt_geom' in flight and flight['alt_geom'] else None
-                    callsign = flight['flight'] if 'flight' in flight and flight['flight'] else None
+                    callsign = flight['flight'].strip() if 'flight' in flight and flight['flight'] else None
                     track = flight['track'] if 'track' in flight and flight['track'] else None
 
                     if (lat and lon or alt) or (not filter_incomplete and callsign):

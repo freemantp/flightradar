@@ -19,7 +19,7 @@ class BaseStationDB:
         self.conn.close()
 
     def query_aircraft(self, icao24addr):
-        self.cur.execute("SELECT Registration, ICAOTypeCode, Type, RegisteredOwners FROM Aircraft where ModeS = (?)", (icao24addr.strip(),))
+        self.cur.execute("SELECT Registration, ICAOTypeCode, Type, RegisteredOwners FROM Aircraft where ModeS = (?)", (icao24addr.strip().upper(),))
         res = self.cur.fetchone()
         if res:
             return Aircraft(icao24addr, res[0], res[1], res[2], res[3])
