@@ -38,7 +38,7 @@ def get_flights():
                     .where(Flight.is_military == True)
                     .order_by(Flight.first_contact.desc()).limit(limit))
 
-            return jsonify([f for f in result_set])
+            return jsonify([toFlightDto(f).__dict__ for f in result_set])
         else:
             result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
                     .order_by(Flight.first_contact.desc()).limit(limit))
@@ -76,7 +76,7 @@ def get_positions(flight_id):
 
         if DBRepository.flight_exists(flight_id):
             positions = DBRepository.get_positions(flight_id)
-            return jsonify([[p for p in positions]])
+            return jsonify([[p.lat, p.lon, p.alt] for p in positions])
         else:
             abort(404)
 

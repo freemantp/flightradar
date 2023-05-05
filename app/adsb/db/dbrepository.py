@@ -57,7 +57,7 @@ class DBRepository:
         return positions_map
 
     @staticmethod
-    def get_positions(flight_id):
+    def get_positions(flight_id: str) -> Position():
         return list(Position.select()
                         .where(Position.flight_fk == flight_id)
                         .order_by(Position.flight_fk, Position.timestmp.asc()))
