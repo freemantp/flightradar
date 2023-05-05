@@ -56,11 +56,11 @@ class FlightUpdater:
     def is_service_alive(self):
         return self._service.connection_alive
 
-    def get_cached_flights(self):
+    def get_cached_flights(self) -> List[PositionReport]:
 
         timestamp = datetime.utcnow() - timedelta(minutes=1)
 
-        return { v:self.flight_lastpos_map.get(v) 
+        return { v:self.flight_lastpos_map.get(v)
                     for (k,v) in self.modeS_flightid_map.items() 
                     if v in self.flight_lastpos_map and self.flight_last_contact[v] > timestamp }
 
@@ -92,8 +92,9 @@ class FlightUpdater:
         recent_flight_timestamp = datetime.utcnow() - timedelta(minutes=self.MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT)
         
         for pos_flights in DBRepository.get_recent_flights_last_pos(recent_flight_timestamp):
-            self.modeS_flightid_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id
-            self.flight_lastpos_map[pos_flights.flight_fk.id] = (pos_flights.flight_fk.id, pos_flights.lat, pos_flights.lon, pos_flights.alt )
+            self.modeS_flightid_map[pos_flights.flight_fk.modeS] = pos_flights.flight_fk.id            
+            #TODO: add track to dbModel
+            self.flight_lastpos_map[pos_flights.flight_fk.id] = PositionReport(pos_flights.flight_fk.modeS, pos_flights.lat, pos_flights.lon, pos_flights.alt, 0.0, pos_flights.flight_fk.callsign)
             self.flight_last_contact[pos_flights.flight_fk.id] = pos_flights.flight_fk.last_contact
 
     def update(self):

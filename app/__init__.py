@@ -1,13 +1,13 @@
-from flask import Flask, Blueprint, g
+from flask import Blueprint, g
 from click import get_current_context
 from os import path
 
+from .flask_app import RadarFlask
 from .config import Config
 from .meta import MetaInformation
 from .adsb.db.basestationdb import BaseStationDB
 from .adsb.db.dbmodels import init_db
 from .adsb.util.logging import init_logging
-from .util.encoder import RadarJsonEncoder
 from .adsb.util.modes_util import ModesUtil
 
 from .scheduling import configure_scheduling
@@ -21,7 +21,7 @@ def get_basestation_db():
     return basestation_db
 
 def create_app():
-    app = Flask(__name__)
+    app = RadarFlask(__name__)
 
     # TODO: make configurable
     if True:
@@ -36,8 +36,6 @@ def create_app():
     app.metaInfo = MetaInformation()
     app.flight_db = init_db(conf.DATA_FOLDER)
     app.modes_util = ModesUtil(conf.DATA_FOLDER)
-
-    app.json_encoder = RadarJsonEncoder
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')

@@ -4,6 +4,7 @@ import requests
 from typing import List
 from .radarservice import RadarService
 from ..util.request_util import disable_urllibs_response_warnings
+from ..util.modes_util import ModesUtil
 from ..model.position_report import PositionReport
 from requests.exceptions import RequestException
 from datetime import datetime
@@ -74,14 +75,15 @@ class Dump1090(RadarService):
                 if ('lat' in flight and 'lon' in flight) or 'flight' in flight:
 
                     icao24 = flight['hex'].strip()
-                    lat = flight['lat'] if 'lat' in flight and flight['lat'] else None
-                    lon = flight['lon'] if 'lon' in flight and flight['lon'] else None
-                    alt = flight['alt_geom'] if 'alt_geom' in flight and flight['alt_geom'] else None
-                    callsign = flight['flight'].strip() if 'flight' in flight and flight['flight'] else None
-                    track = flight['track'] if 'track' in flight and flight['track'] else None
+                    if ModesUtil.is_icao24_addr(icao24):
+                        lat = flight['lat'] if 'lat' in flight and flight['lat'] else None
+                        lon = flight['lon'] if 'lon' in flight and flight['lon'] else None
+                        alt = flight['alt_geom'] if 'alt_geom' in flight and flight['alt_geom'] else None
+                        callsign = flight['flight'].strip() if 'flight' in flight and flight['flight'] else None
+                        track = flight['track'] if 'track' in flight and flight['track'] else None
 
-                    if (lat and lon or alt) or (not filter_incomplete and callsign):
-                        flights.append(PositionReport(icao24, lat, lon, alt, track, callsign))
+                        if (lat and lon or alt) or (not filter_incomplete and callsign):
+                            flights.append(PositionReport(icao24, lat, lon, alt, track, callsign))
 
             return flights
         else:

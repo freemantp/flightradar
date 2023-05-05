@@ -1,4 +1,6 @@
 from . import api
+from .apimodels import FlightDto
+from .mappers import toFlightDto
 from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
 from .. exceptions import ValidationError
@@ -40,8 +42,8 @@ def get_flights():
         else:
             result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
                     .order_by(Flight.first_contact.desc()).limit(limit))
-
-            return jsonify([f for f in result_set])
+        
+            return jsonify([toFlightDto(f).__dict__ for f in result_set])
 
     except ValueError:
         raise ValidationError('invalid arguments')
@@ -54,7 +56,7 @@ def get_flight(flight_id):
                             .order_by(Flight.last_contact.desc()).limit(1))
 
         if result_set.exists():
-            return jsonify(result_set[0])
+            return jsonify(toFlightDto(result_set[0]).__dict__)
         else:
             abort(404)
             
@@ -63,7 +65,8 @@ def get_flight(flight_id):
 
 @api.route('/positions/live', methods=['GET'])
 def get_live_positions():
-    return jsonify(app.updater.get_cached_flights())
+    cached_flights = app.updater.get_cached_flights()
+    return jsonify({str(k):v.__dict__ for k,v in cached_flights.items()})
 
 
 @api.route('/flights/<flight_id>/positions') 

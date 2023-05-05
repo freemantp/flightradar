@@ -63,7 +63,7 @@ class DBRepository:
                         .order_by(Position.flight_fk, Position.timestmp.asc()))
 
     @staticmethod
-    def get_recent_flights_last_pos(timestamp=datetime.min):
+    def get_recent_flights_last_pos(timestamp=datetime.min) -> Position():
 
         """ Retreives flights with their most recent positon. 
         Only flights with activity newer than the passed timestamp will be considered"""

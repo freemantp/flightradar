@@ -1,9 +1,6 @@
 venv/*
 *.pyc
 .vscode/*
-resources/*.db
-resources/*.db-shm
-resources/*.db-wal
+resources/*.sqlite*
 config*.json
 resources/BaseStation.sqb
-resources/flights.sqlite

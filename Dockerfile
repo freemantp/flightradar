@@ -1,4 +1,4 @@
-FROM python:3.10.8-alpine 
+FROM python:3.11-alpine 
 
 LABEL maintainer="Michael Morandi"
 
@@ -15,6 +15,7 @@ USER radar
 WORKDIR /home/radar
 
 # install python packages
+
 COPY requirements.txt requirements.txt
 RUN python -m venv venv
 RUN venv/bin/pip install --upgrade pip

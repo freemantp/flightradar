@@ -1,6 +1,7 @@
 import time
 import datetime
 import csv
+import string
 from os import path
 
 from ...config import Config
@@ -23,6 +24,10 @@ class ModesUtil:
                 self.ranges.append(newrange)
 
             csvfile.close()
+    
+    @staticmethod
+    def is_icao24_addr(icao24: str):
+        return len(icao24) == 6 and all(c in string.hexdigits for c in icao24)
 
     def is_military(self, icao24):
 
@@ -41,7 +46,7 @@ class ModesUtil:
         return icao >= 0x4B7000 and icao <= 0x4B7FFF
 
     @staticmethod
-    def is_swiss(icaohex):
+    def is_swiss(icaohex: str):
         if icaohex and icaohex[0:2] == "4B":
             third = int(icaohex[2], 16)
             if third >= 0 and third <= 8:
