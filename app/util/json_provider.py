@@ -1,5 +1,4 @@
 from flask.json.provider import JSONProvider
-from decimal import Decimal
 import orjson
 
 class RadarJsonProvider(JSONProvider):
@@ -8,7 +7,6 @@ class RadarJsonProvider(JSONProvider):
 
         if option is None:
             option = orjson.OPT_APPEND_NEWLINE | orjson.OPT_NAIVE_UTC
-
   
         return orjson.dumps(obj, option=option).decode()
 

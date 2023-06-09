@@ -22,7 +22,7 @@ RUN venv/bin/pip install --upgrade pip
 RUN venv/bin/pip install -r requirements.txt
 
 # install app
-COPY app app
+COPY --chown=radar app app
 RUN mkdir resources
 COPY resources/mil_ranges.csv resources/
 COPY resources/BaseStation.sqb.tar.bz2 resources/
