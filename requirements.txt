@@ -4,7 +4,7 @@ Flask-APScheduler==1.13.1
 peewee==3.17.1
 python-dateutil==2.9.0.post0
 pytz==2024.1
-gunicorn==21.2.0
+gunicorn==22.0.0
 requests==2.31.0
 orjson==3.9.15
 py-automapper==1.2.3
