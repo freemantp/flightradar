@@ -1,5 +1,4 @@
 from . import api
-from .apimodels import FlightDto
 from .mappers import toFlightDto
 from .. util.flask_util import get_boolean_arg
 from .. adsb.db.dbrepository import DBRepository
@@ -7,15 +6,18 @@ from .. exceptions import ValidationError
 from .. adsb.db.dbmodels import Flight
 from .. scheduling import UPDATER_JOB_NAME
 
-from flask import current_app as app, Response, request, jsonify, abort
+from flask import current_app as app, request, jsonify, abort
+
 
 @api.route('/info')
 def get_meta_info():
     return jsonify(app.metaInfo.__dict__)
 
+
 @api.route('/alive')
 def alive():
     return "Yes"
+
 
 @api.route('/ready')
 def ready():
@@ -23,30 +25,30 @@ def ready():
     if updater_job and not updater_job.pending:
         return "Yes"
     else:
-        abort(500)    
+        abort(500)
+
 
 @api.route('/flights')
 def get_flights():
     try:
-
-        
-        filter = request.args.get('filter', default = None, type = str)
-        limit = request.args.get('limit', default = None, type = int)
+        filter = request.args.get('filter', default=None, type=str)
+        limit = request.args.get('limit', default=None, type=int)
 
         if filter == 'mil':
             result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                    .where(Flight.is_military == True)
-                    .order_by(Flight.first_contact.desc()).limit(limit))
+                          .where(Flight.is_military == True)
+                          .order_by(Flight.first_contact.desc()).limit(limit))
 
             return jsonify([toFlightDto(f).__dict__ for f in result_set])
         else:
             result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                    .order_by(Flight.first_contact.desc()).limit(limit))
-        
+                          .order_by(Flight.first_contact.desc()).limit(limit))
+
             return jsonify([toFlightDto(f).__dict__ for f in result_set])
 
     except ValueError:
         raise ValidationError('invalid arguments')
+
 
 @api.route('/flights/<flight_id>')
 def get_flight(flight_id):
@@ -59,17 +61,18 @@ def get_flight(flight_id):
             return jsonify(toFlightDto(result_set[0]).__dict__)
         else:
             abort(404)
-            
+
     except ValueError:
-        raise ValidationError('invalid arguments')    
+        raise ValidationError('invalid arguments')
+
 
 @api.route('/positions/live', methods=['GET'])
 def get_live_positions():
     cached_flights = app.updater.get_cached_flights()
-    return jsonify({str(k):v.__dict__ for k,v in cached_flights.items()})
+    return jsonify({str(k): v.__dict__ for k, v in cached_flights.items()})
 
 
-@api.route('/flights/<flight_id>/positions') 
+@api.route('/flights/<flight_id>/positions')
 def get_positions(flight_id):
     try:
         int(flight_id)
@@ -83,36 +86,41 @@ def get_positions(flight_id):
     except ValueError:
         raise ValidationError('Invalid flight id format')
 
-@api.route('/positions') 
+
+@api.route('/positions')
 def get_all_positions():
     archived = get_boolean_arg('archived')
-    filter = request.args.get('filter', default = None, type = str)
+    filter = request.args.get('filter', default=None, type=str)
 
     positions = DBRepository.get_all_positions(archived)
 
     if filter == 'mil':
-        return jsonify({key:value for (key,value) in positions.items() if app.modes_util.is_military(key)})
+        return jsonify({key: value for (key, value) in positions.items() if app.modes_util.is_military(key)})
     else:
-        return jsonify(positions) 
+        return jsonify(positions)
 
 
 @api.after_request
 def after_request(response):
 
-    #TODO: look into Flask-Cors (https://flask-cors.readthedocs.io)
+    # TODO: look into Flask-Cors (https://flask-cors.readthedocs.io)
 
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')  
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
     return response
+
 
 @api.errorhandler(ValueError)
 def validation_error(e):
     return jsonify({'error': e.args[0]}), 400
 
+
 @api.errorhandler(ValueError)
 def validation_error(e):
-    return jsonify({'error': e.args[0]}), 400    
+    return jsonify({'error': e.args[0]}), 400
+
 
 @api.app_errorhandler(500)
 def handle_generic_err(e):
@@ -121,7 +129,8 @@ def handle_generic_err(e):
     if isinstance(e, NameError):
         message = 'An internal eror occured'
 
-    return jsonify({'error':message}), 500
+    return jsonify({'error': message}), 500
+
 
 @api.app_errorhandler(404)
 def not_found(e):
