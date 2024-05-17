@@ -102,12 +102,9 @@ def get_all_positions():
 
 @api.after_request
 def after_request(response):
-
-    # TODO: look into Flask-Cors (https://flask-cors.readthedocs.io)
-
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
+                         'Content-Type,Authorization,Pragma,Cache-Control,Expires')
     response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
     return response
 
