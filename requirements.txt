@@ -5,6 +5,6 @@ peewee==3.17.1
 python-dateutil==2.9.0.post0
 pytz==2024.1
 gunicorn==22.0.0
-requests==2.31.0
+requests==2.32.0
 orjson==3.10.1
 py-automapper==1.2.3
