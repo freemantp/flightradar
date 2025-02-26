@@ -1,61 +1,64 @@
-from peewee import SqliteDatabase, Model, DatabaseProxy
-from peewee import AutoField, CharField, FixedCharField, FloatField
-from peewee import BooleanField, DateTimeField, IntegerField, ForeignKeyField
+from sqlmodel import SQLModel, Field, Relationship, create_engine
+from typing import Optional, List
 import datetime
 from os import path
+from sqlalchemy import text
 
-database_proxy = DatabaseProxy()
-
-class BaseModel(Model):
-    class Meta:
-        database = database_proxy
-
-class Flight(BaseModel):
-    id = AutoField
-    callsign = CharField(null = True)
-    modeS = FixedCharField(max_length=6, index=True)
-    is_military = BooleanField(default=False)
-    archived = BooleanField(default=False)
-    first_contact = DateTimeField(default=datetime.datetime.utcnow)
-    last_contact = DateTimeField(default=datetime.datetime.utcnow)
-
+class Flight(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    callsign: Optional[str] = None
+    modeS: str = Field(index=True, max_length=6)
+    is_military: bool = Field(default=False)
+    archived: bool = Field(default=False)
+    first_contact: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    last_contact: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    
+    # Relationships
+    positions: List["Position"] = Relationship(back_populates="flight")
+    
     def __str__(self):
-        return 'Flight id={:d}, callsign={:s}, modeS={:s} [{:s}], archived={:s}, last_contact={:s}'.format( \
-            self.id, str(self.callsign), str(self.modeS), 'mil' if self.is_military else 'civ', str(self.archived), str(self.last_contact) )
+        return f'Flight id={self.id}, callsign={self.callsign}, modeS={self.modeS} [{"mil" if self.is_military else "civ"}], archived={self.archived}, last_contact={self.last_contact}'
 
-class Position(BaseModel):
-    flight_fk = ForeignKeyField(Flight, backref='positions')
-    lat = FloatField()
-    lon = FloatField()   
-    alt = IntegerField(null=True)
-    timestmp = DateTimeField(default=datetime.datetime.utcnow)
-
-    class Meta:
-        database = database_proxy
-        primary_key = False
-
+class Position(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    flight_id: int = Field(foreign_key="flight.id")
+    lat: float
+    lon: float
+    alt: Optional[int] = None
+    timestmp: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    
+    # Relationships
+    flight: Flight = Relationship(back_populates="positions")
+    
     def __repr__(self):
-        return 'flight={:d} pos=({:f},{:f},{:d}) at={:s}'.format( self.flight_fk.id, self.lat, self.lon, self.alt, str(self.timestmp) )
+        return f'flight={self.flight_id} pos=({self.lat},{self.lon},{self.alt}) at={self.timestmp}'
 
 DB_MODEL_CLASSES = [Flight, Position]
 
-def init_schema(db):
-
-    TRIGGER_CREATE = 'CREATE TRIGGER flight_timestmp_trigger AFTER INSERT ON Position BEGIN UPDATE Flight SET last_contact = NEW.timestmp WHERE id=NEW.flight_fk_id; END'
-
-    db.create_tables(DB_MODEL_CLASSES)
-    db.execute_sql(TRIGGER_CREATE)
+def init_schema(engine):
+    SQLModel.metadata.create_all(engine)
+    
+    # Create trigger to update flight last_contact
+    with engine.connect() as conn:
+        conn.execute(text(
+            """
+            CREATE TRIGGER IF NOT EXISTS flight_timestmp_trigger 
+            AFTER INSERT ON position 
+            BEGIN 
+                UPDATE flight SET last_contact = NEW.timestmp 
+                WHERE id=NEW.flight_id; 
+            END
+            """
+        ))
+        conn.commit()
 
 def init_db(data_folder):
-
-    position_db = SqliteDatabase(
-        path.join(data_folder, 'flights.sqlite'),
-        pragmas={
-            'journal_mode': 'wal',
-            'cache_size': -1024 * 32
-        })
-
-
-    database_proxy.initialize(position_db)
-
-    return position_db
+    db_path = path.join(data_folder, 'flights.sqlite')
+    
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        connect_args={"check_same_thread": False},
+        echo=False
+    )
+    
+    return engine

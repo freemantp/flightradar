@@ -34,9 +34,8 @@ COPY --chown=radar contrib/start.sh ./
 RUN echo "{ \"gitCommitId\": \"$COMMIT_ID\", \"buildTimestamp\": \"`date -I'seconds'`\"}" > resources/meta.json
 
 # prepare dbs
-ENV FLASK_APP flightradar.py
-RUN venv/bin/python -m flask initschema
+RUN venv/bin/python flightradar.py initschema
 
 # runtime config
-EXPOSE 5000 
+EXPOSE 8083 
 ENTRYPOINT ["/bin/sh", "./start.sh"]

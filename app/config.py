@@ -4,7 +4,13 @@ import logging
 from enum import Enum
 from pathlib import Path
 
-logger =  logging.getLogger("Config")
+logger = logging.getLogger("Config")
+
+# Global app state to be used across modules
+class AppState:
+    db_engine = None
+    
+app_state = AppState()
 
 class LoggingConfig:
 

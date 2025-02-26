@@ -1,8 +1,10 @@
 import logging
 import time
-from flask import Flask
-from flask_apscheduler import APScheduler
+from fastapi import FastAPI
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.events import *
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.executors.pool import ThreadPoolExecutor
 from .config import Config
 from .adsb.flightupdater import FlightUpdater
 from .adsb.datasource.airplane_crawler import AirplaneCrawler
@@ -16,14 +18,28 @@ def create_updater(config):
     updater.initialize(config)
     return updater
 
-def configure_scheduling(app: Flask, conf: Config):
+def configure_scheduling(app: FastAPI, conf: Config):
+    # Configure job stores and executors
+    jobstores = {
+        'default': MemoryJobStore()
+    }
+    executors = {
+        'default': ThreadPoolExecutor(20)
+    }
+    job_defaults = {
+        'coalesce': True,
+        'max_instances': 1
+    }
 
-    # Async tasks
-    scheduler = APScheduler()
-    scheduler.init_app(app)
-
+    # Create scheduler
+    scheduler = AsyncIOScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+    
+    # Store scheduler in app state
+    app.state.apscheduler = scheduler
+    
+    # Create updater
     updater = create_updater(conf)
-    app.updater = updater
+    app.state.updater = updater
 
     logging.getLogger('apscheduler.executors.default').setLevel(logging.WARN)
     logging.getLogger('apscheduler.scheduler').setLevel(logging.ERROR)
@@ -34,19 +50,28 @@ def configure_scheduling(app: Flask, conf: Config):
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
-    @scheduler.task('interval', id=UPDATER_JOB_NAME, seconds=1.0, misfire_grace_time=5, coalesce=True)
-    def update_flights():
-        with app.app_context():
-            app.updater.update()
+    # Add jobs to scheduler
+    scheduler.add_job(
+        id=UPDATER_JOB_NAME,
+        func=lambda: app.state.updater.update(),
+        trigger='interval',
+        seconds=1.0,
+        misfire_grace_time=5,
+        coalesce=True
+    )
 
     if conf.UNKNOWN_AIRCRAFT_CRAWLING and conf.RADAR_SERVICE_TYPE == 'mm2': # TODO enable vrs
-
         crawler = AirplaneCrawler(conf)
-        app.crawler = crawler
+        app.state.crawler = crawler
 
-        @scheduler.task('interval', id='airplane_crawler', seconds=30, misfire_grace_time=90, coalesce=True)
-        def crawl_airplanes():
-            with app.app_context():
-                app.crawler.crawl_sources()
+        scheduler.add_job(
+            id='airplane_crawler',
+            func=lambda: app.state.crawler.crawl_sources(),
+            trigger='interval',
+            seconds=30,
+            misfire_grace_time=90,
+            coalesce=True
+        )
 
-    app.apscheduler.start()
+    # Start the scheduler
+    scheduler.start()

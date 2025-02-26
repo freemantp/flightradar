@@ -1,6 +1,6 @@
 # Flight radar
 
-Fetches [ADS-B](https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_-_broadcast) flight data from radar servers ([ModeSMixer2](http://xdeco.org/?page_id=48) or [Virtual Radar Server](http://www.virtualradarserver.co.uk/)) and presents a chronological view of past flights with an interactive live map of position reports. 
+Fetches [ADS-B](https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_-_broadcast) flight data from radar servers ([ModeSMixer2](http://xdeco.org/?page_id=48) or [Virtual Radar Server](http://www.virtualradarserver.co.uk/)) and presents a chronological view of past flights with an interactive live map of position reports. Built with FastAPI 
 
 ## Impressions
 
@@ -58,20 +58,25 @@ flightradar uses an Sqlite3 database (resources/flights.sqlite) to store flight 
 
 Initialize schema:
 ```
-export FLASK_APP=flightradar.py
-flask initschema
+python flightradar.py initschema
 ```
+
 ### Starting the application
 
-Running it with the debug webserver (__Not recommended__ for productive use). Don't forget to initialize the db  (see abve) before the first run
+Running it with the development server (__Not recommended__ for productive use). Don't forget to initialize the db (see above) before the first run:
 
 ```
-export FLASK_APP=flightradar.py
-flask run
+uvicorn flightradar:app --reload
 ```
-Runnig it with WSGI (__productive setup__) (binds to all interfaces on port 8083)
+
+Running it with ASGI in production (__recommended setup__) (binds to all interfaces on port 8083):
 ```
-gunicorn flightradar:app --bind 0.0.0.0:8083
+uvicorn flightradar:app --host 0.0.0.0 --port 8083
+```
+
+Or using Gunicorn with Uvicorn workers:
+```
+gunicorn flightradar:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8083
 ```
 
 ## Using Windows

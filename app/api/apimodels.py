@@ -1,5 +1,6 @@
 from datetime import datetime
-
+from pydantic import BaseModel, Field
+from typing import Optional
 
 def to_datestring(obj: datetime) -> str:
     if obj.tzinfo:
@@ -10,21 +11,22 @@ def to_datestring(obj: datetime) -> str:
         # eg: '2015-09-25T23:14:42.588601Z'
         return obj.isoformat('T') + 'Z'
 
+class FlightDto(BaseModel):
+    id: int
+    icao24: str
+    cls: Optional[str] = None
+    lstCntct: str
+    firstCntct: str
+    
+    class Config:
+        arbitrary_types_allowed = True
 
-class FlightDto:
-    def __init__(self, id: str, icao24: str, cls: str, lstCntct: datetime, firstCntct: datetime):
-        self.id = id
-        self.icao24 = icao24
-        self.cls = cls
-        self.lstCntct = to_datestring(lstCntct)
-        self.firstCntct = to_datestring(firstCntct)
-
-
-class AircraftDto:
-
-    def __init__(self, icao24: str, reg: str, icaoType: str, type: str, op: str):
-        self.icao24 = icao24
-        self.icaoType = icaoType
-        self.type = type
-        self.reg = reg
-        self.op = op
+class AircraftDto(BaseModel):
+    icao24: str
+    reg: Optional[str] = None
+    icaoType: Optional[str] = None
+    type: Optional[str] = None
+    op: Optional[str] = None
+    
+    class Config:
+        arbitrary_types_allowed = True

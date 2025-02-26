@@ -1,6 +1,6 @@
-from flask import Blueprint
+from fastapi import APIRouter
 
-api = Blueprint('api', __name__)
+router = APIRouter()
 
 from . import flights
 from . import aircraft

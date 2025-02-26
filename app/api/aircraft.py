@@ -1,15 +1,21 @@
-from . import api
+from fastapi import Depends, HTTPException, Request
+from typing import Dict, Any
+
+from . import router
 from .. import get_basestation_db
 from .mappers import toAircraftDto
-from flask import jsonify, abort
+from .apimodels import AircraftDto
 
 
-@api.route('/aircraft/<icao24addr>', methods=['GET'])
-def get_aircraft(icao24addr):
-
-    aircraft = get_basestation_db().query_aircraft(icao24addr)
+@router.get('/aircraft/{icao24addr}', response_model=AircraftDto)
+def get_aircraft(
+    icao24addr: str,
+    request: Request,
+    basestation_db = Depends(get_basestation_db)
+):
+    aircraft = basestation_db.query_aircraft(icao24addr)
 
     if aircraft:
-        return jsonify(toAircraftDto(aircraft).__dict__)
+        return toAircraftDto(aircraft)
     else:
-        abort(404)
+        raise HTTPException(status_code=404, detail="Aircraft not found")

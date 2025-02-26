@@ -1,134 +1,136 @@
-from . import api
+from fastapi import APIRouter, Request, Query, Path, HTTPException, Depends
+from fastapi.responses import JSONResponse
+from typing import List, Dict, Optional, Any, Union
+from sqlmodel import Session, select
+from pydantic import BaseModel
+
+from . import router
 from .mappers import toFlightDto
-from .. util.flask_util import get_boolean_arg
+from .apimodels import FlightDto
+from .. import get_db
 from .. adsb.db.dbrepository import DBRepository
 from .. exceptions import ValidationError
 from .. adsb.db.dbmodels import Flight
 from .. scheduling import UPDATER_JOB_NAME
 
-from flask import current_app as app, request, jsonify, abort
+# Define response models
+class MetaInfo(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
 
+class PositionReport(BaseModel):
+    lat: float
+    lon: float
+    alt: int
+    
+    class Config:
+        arbitrary_types_allowed = True
 
-@api.route('/info')
-def get_meta_info():
-    return jsonify(app.metaInfo.__dict__)
+@router.get('/info', response_model=Dict[str, Any])
+def get_meta_info(request: Request):
+    return request.app.state.metaInfo.__dict__
 
-
-@api.route('/alive')
+@router.get('/alive')
 def alive():
     return "Yes"
 
-
-@api.route('/ready')
-def ready():
-    updater_job = app.apscheduler.get_job(UPDATER_JOB_NAME)
+@router.get('/ready')
+def ready(request: Request):
+    updater_job = request.app.state.apscheduler.get_job(UPDATER_JOB_NAME)
     if updater_job and not updater_job.pending:
         return "Yes"
     else:
-        abort(500)
+        raise HTTPException(status_code=500, detail="Service not ready")
 
-
-@api.route('/flights')
-def get_flights():
+@router.get('/flights', response_model=List[FlightDto])
+def get_flights(
+    request: Request,
+    filter: Optional[str] = Query(None, description="Filter flights (e.g. 'mil' for military only)"),
+    limit: Optional[int] = Query(None, description="Maximum number of flights to return"),
+    db: Session = Depends(get_db)
+):
     try:
-        filter = request.args.get('filter', default=None, type=str)
-        limit = request.args.get('limit', default=None, type=int)
-
         if filter == 'mil':
-            result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                          .where(Flight.is_military == True)
-                          .order_by(Flight.first_contact.desc()).limit(limit))
-
-            return jsonify([toFlightDto(f).__dict__ for f in result_set])
+            statement = (
+                select(Flight)
+                .where(Flight.is_military == True)
+                .order_by(Flight.first_contact.desc())
+            )
+            if limit:
+                statement = statement.limit(limit)
+                
+            flights = db.exec(statement).all()
+            return [toFlightDto(f) for f in flights]
         else:
-            result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                          .order_by(Flight.first_contact.desc()).limit(limit))
-
-            return jsonify([toFlightDto(f).__dict__ for f in result_set])
+            statement = (
+                select(Flight)
+                .order_by(Flight.first_contact.desc())
+            )
+            if limit:
+                statement = statement.limit(limit)
+                
+            flights = db.exec(statement).all()
+            return [toFlightDto(f) for f in flights]
 
     except ValueError:
-        raise ValidationError('invalid arguments')
+        raise HTTPException(status_code=400, detail="Invalid arguments")
 
-
-@api.route('/flights/<flight_id>')
-def get_flight(flight_id):
+@router.get('/flights/{flight_id}', response_model=FlightDto)
+def get_flight(flight_id: int, db: Session = Depends(get_db)):
     try:
-        result_set = (Flight.select(Flight.id, Flight.callsign, Flight.modeS, Flight.archived, Flight.last_contact, Flight.first_contact)
-                            .where(Flight.id == flight_id)
-                            .order_by(Flight.last_contact.desc()).limit(1))
-
-        if result_set.exists():
-            return jsonify(toFlightDto(result_set[0]).__dict__)
+        statement = (
+            select(Flight)
+            .where(Flight.id == flight_id)
+            .order_by(Flight.last_contact.desc())
+            .limit(1)
+        )
+        
+        flight = db.exec(statement).first()
+        if flight:
+            return toFlightDto(flight)
         else:
-            abort(404)
+            raise HTTPException(status_code=404, detail="Flight not found")
 
     except ValueError:
-        raise ValidationError('invalid arguments')
+        raise HTTPException(status_code=400, detail="Invalid arguments")
 
+@router.get('/positions/live', response_model=Dict[str, Any])
+def get_live_positions(request: Request):
+    cached_flights = request.app.state.updater.get_cached_flights()
+    return {str(k): v.__dict__ for k, v in cached_flights.items()}
 
-@api.route('/positions/live', methods=['GET'])
-def get_live_positions():
-    cached_flights = app.updater.get_cached_flights()
-    return jsonify({str(k): v.__dict__ for k, v in cached_flights.items()})
-
-
-@api.route('/flights/<flight_id>/positions')
-def get_positions(flight_id):
+@router.get('/flights/{flight_id}/positions', response_model=List[List[Union[float, int]]])
+def get_positions(flight_id: int, db: Session = Depends(get_db)):
     try:
-        int(flight_id)
-
-        if DBRepository.flight_exists(flight_id):
-            positions = DBRepository.get_positions(flight_id)
-            return jsonify([[p.lat, p.lon, p.alt] for p in positions])
+        if DBRepository.flight_exists(db, flight_id):
+            positions = DBRepository.get_positions(db, flight_id)
+            return [[p.lat, p.lon, p.alt] for p in positions]
         else:
-            abort(404)
+            raise HTTPException(status_code=404, detail="Flight not found")
 
     except ValueError:
-        raise ValidationError('Invalid flight id format')
+        raise HTTPException(status_code=400, detail="Invalid flight id format")
 
+@router.get('/positions')
+def get_all_positions(
+    request: Request,
+    archived: bool = Query(False, description="Include archived positions"),
+    filter: Optional[str] = Query(None, description="Filter positions (e.g. 'mil' for military only)"),
+    db: Session = Depends(get_db)
+):
+    positions = DBRepository.get_all_positions(db, archived)
 
-@api.route('/positions')
-def get_all_positions():
-    archived = get_boolean_arg('archived')
-    filter = request.args.get('filter', default=None, type=str)
-
-    positions = DBRepository.get_all_positions(archived)
-
+    # Filter positions by military if requested
     if filter == 'mil':
-        return jsonify({key: value for (key, value) in positions.items() if app.modes_util.is_military(key)})
-    else:
-        return jsonify(positions)
-
-
-@api.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization,Pragma,Cache-Control,Expires')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
-    return response
-
-
-@api.errorhandler(ValueError)
-def validation_error(e):
-    return jsonify({'error': e.args[0]}), 400
-
-
-@api.errorhandler(ValueError)
-def validation_error(e):
-    return jsonify({'error': e.args[0]}), 400
-
-
-@api.app_errorhandler(500)
-def handle_generic_err(e):
-
-    message = e.args[0]
-    if isinstance(e, NameError):
-        message = 'An internal eror occured'
-
-    return jsonify({'error': message}), 500
-
-
-@api.app_errorhandler(404)
-def not_found(e):
-    return '', 404
+        positions = {key: value for (key, value) in positions.items() if request.app.state.modes_util.is_military(key)}
+    
+    # Clean up any None values to prevent validation errors
+    cleaned_positions = {}
+    for key, value_list in positions.items():
+        cleaned_positions[key] = [
+            [lat, lon, alt if alt is not None else 0] 
+            for lat, lon, alt in value_list
+            if lat is not None and lon is not None
+        ]
+    
+    return cleaned_positions

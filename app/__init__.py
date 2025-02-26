@@ -1,49 +1,80 @@
-from flask import Blueprint, g
-from click import get_current_context
+from fastapi import FastAPI, Request, Depends
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import Session
 from os import path
+from contextvars import ContextVar
 
-from .flask_app import RadarFlask
-from .config import Config
+from .config import Config, app_state
 from .meta import MetaInformation
 from .adsb.db.basestationdb import BaseStationDB
-from .adsb.db.dbmodels import init_db
+from .adsb.db.dbmodels import init_db, Flight, Position
 from .adsb.util.logging import init_logging
 from .adsb.util.modes_util import ModesUtil
 
 from .scheduling import configure_scheduling
 
-def get_basestation_db():
-    from flask import current_app as app
+# Context variables to store request-scoped objects
+basestation_db_var = ContextVar("basestation_db", default=None)
 
-    basestation_db = getattr(g, '_basestation_db', None)
+
+def get_basestation_db(request: Request):
+    basestation_db = basestation_db_var.get()
     if basestation_db is None:
-        basestation_db = g._basestation_db = BaseStationDB(path.join(app.config['DATA_FOLDER'], 'BaseStation.sqb'))
+        basestation_db = BaseStationDB(path.join(request.app.state.config.DATA_FOLDER, 'BaseStation.sqb'))
+        basestation_db_var.set(basestation_db)
     return basestation_db
 
-def create_app():
-    app = RadarFlask(__name__)
 
-    # TODO: make configurable
-    if True:
-        from werkzeug.middleware.proxy_fix import ProxyFix
-        app.wsgi_app = ProxyFix(app.wsgi_app)
+def get_db(request: Request):
+    with Session(request.app.state.db_engine) as session:
+        yield session
+
+
+def create_app():
+    app = FastAPI(
+        title="Flight Radar",
+        description="ADS-B flight data API",
+        version="1.0.0"
+    )
 
     # Config
-    conf = Config() 
-    app.config.from_object(conf)
+    conf = Config()
     init_logging(conf.LOGGING_CONFIG)
 
-    app.metaInfo = MetaInformation()
-    app.flight_db = init_db(conf.DATA_FOLDER)
-    app.modes_util = ModesUtil(conf.DATA_FOLDER)
+    # Init database
+    db_engine = init_db(conf.DATA_FOLDER)
 
-    from .api import api as api_blueprint
-    app.register_blueprint(api_blueprint, url_prefix='/api/v1')
+    # Store app state
+    app.state.config = conf
+    app.state.metaInfo = MetaInformation()
+    app.state.db_engine = db_engine
+    app.state.modes_util = ModesUtil(conf.DATA_FOLDER)
+    
+    # Also store in global app_state for compatibility
+    app_state.db_engine = db_engine
 
-    # Run asynchronous tasks only if in run mode
-    click_ctx = get_current_context(True)
-    if not click_ctx or (click_ctx and click_ctx.info_name == 'run'):
+    # Add middleware
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["GET", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "Pragma", "Cache-Control", "Expires"],
+    )
+
+    # Import and include routers
+    from .api import router as api_router
+    app.include_router(api_router, prefix="/api/v1")
+
+    # Configure async tasks
+    @app.on_event("startup")
+    async def startup():
         configure_scheduling(app, conf)
 
-    return app
+    @app.on_event("shutdown")
+    def shutdown():
+        pass
 
+    return app
