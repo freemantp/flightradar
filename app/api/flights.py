@@ -14,25 +14,31 @@ from .. adsb.db.dbmodels import Flight
 from .. scheduling import UPDATER_JOB_NAME
 
 # Define response models
+
+
 class MetaInfo(BaseModel):
     class Config:
         arbitrary_types_allowed = True
+
 
 class PositionReport(BaseModel):
     lat: float
     lon: float
     alt: int
-    
+
     class Config:
         arbitrary_types_allowed = True
+
 
 @router.get('/info', response_model=Dict[str, Any])
 def get_meta_info(request: Request):
     return request.app.state.metaInfo.__dict__
 
+
 @router.get('/alive')
 def alive():
     return "Yes"
+
 
 @router.get('/ready')
 def ready(request: Request):
@@ -41,6 +47,7 @@ def ready(request: Request):
         return "Yes"
     else:
         raise HTTPException(status_code=500, detail="Service not ready")
+
 
 @router.get('/flights', response_model=List[FlightDto])
 def get_flights(
@@ -58,7 +65,7 @@ def get_flights(
             )
             if limit:
                 statement = statement.limit(limit)
-                
+
             flights = db.exec(statement).all()
             return [toFlightDto(f) for f in flights]
         else:
@@ -68,12 +75,13 @@ def get_flights(
             )
             if limit:
                 statement = statement.limit(limit)
-                
+
             flights = db.exec(statement).all()
             return [toFlightDto(f) for f in flights]
 
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid arguments")
+
 
 @router.get('/flights/{flight_id}', response_model=FlightDto)
 def get_flight(flight_id: int, db: Session = Depends(get_db)):
@@ -84,7 +92,7 @@ def get_flight(flight_id: int, db: Session = Depends(get_db)):
             .order_by(Flight.last_contact.desc())
             .limit(1)
         )
-        
+
         flight = db.exec(statement).first()
         if flight:
             return toFlightDto(flight)
@@ -94,22 +102,25 @@ def get_flight(flight_id: int, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid arguments")
 
+
 @router.get('/positions/live', response_model=Dict[str, Any])
 def get_live_positions(request: Request):
     cached_flights = request.app.state.updater.get_cached_flights()
     return {str(k): v.__dict__ for k, v in cached_flights.items()}
+
 
 @router.get('/flights/{flight_id}/positions', response_model=List[List[Union[float, int]]])
 def get_positions(flight_id: int, db: Session = Depends(get_db)):
     try:
         if DBRepository.flight_exists(db, flight_id):
             positions = DBRepository.get_positions(db, flight_id)
-            return [[p.lat, p.lon, p.alt] for p in positions]
+            return [[p.lat, p.lon, p.alt if p.alt is not None else -1] for p in positions]
         else:
             raise HTTPException(status_code=404, detail="Flight not found")
 
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid flight id format")
+
 
 @router.get('/positions')
 def get_all_positions(
@@ -123,14 +134,14 @@ def get_all_positions(
     # Filter positions by military if requested
     if filter == 'mil':
         positions = {key: value for (key, value) in positions.items() if request.app.state.modes_util.is_military(key)}
-    
+
     # Clean up any None values to prevent validation errors
     cleaned_positions = {}
     for key, value_list in positions.items():
         cleaned_positions[key] = [
-            [lat, lon, alt if alt is not None else 0] 
+            [lat, lon, alt if alt is not None else 0]
             for lat, lon, alt in value_list
             if lat is not None and lon is not None
         ]
-    
+
     return cleaned_positions
