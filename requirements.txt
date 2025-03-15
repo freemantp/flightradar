@@ -7,6 +7,6 @@ pytz==2024.1
 requests==2.32.0
 py-automapper==1.2.3
 typer==0.15.1
-pymongo==4.6.1
+pymongo==4.6.3
 pydantic==2.5.2
 certifi==2025.1.31
