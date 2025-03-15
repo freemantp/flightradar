@@ -10,15 +10,14 @@ cli = typer.Typer()
 
 @cli.command()
 def initschema():
-    """Initialize DB schema."""
+    """Initialize MongoDB schema."""
 
-    from app.adsb.db.dbmodels import init_schema, init_db
+    from app.adsb.db import init_mongodb
     from app.config import Config
 
     conf = Config()
-    db = init_db(conf.DATA_FOLDER)
-    init_schema(db)
-    print("Database schema initialized successfully")
+    mongodb = init_mongodb(conf.MONGODB_URI, conf.MONGODB_DB_NAME)
+    print("MongoDB database initialized successfully")
 
 
 @cli.command()

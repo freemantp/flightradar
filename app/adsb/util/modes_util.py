@@ -4,9 +4,9 @@ import csv
 import string
 from os import path
 
-from ...config import Config
+from ...config import Config, app_state
 
-from ..db.basestationdb import BaseStationDB
+from ..db.basestation_mongodb import BaseStationMongoDB
 from ..datasource.modesmixer import ModeSMixer
 
 class ModesUtil:
@@ -61,7 +61,8 @@ if __name__ == "__main__":
 
     mil_ranges = ModesUtil(app_cfg.data_folder)
 
-    bs_db = BaseStationDB(file_name = path.join(app_cfg.data_folder, 'BaseStation.sqb'))
+    # Initialize MongoDB connection
+    bs_db = BaseStationMongoDB(app_state.mongodb)
     found_mil_ac = set()
 
     def handle_ac(icao24):

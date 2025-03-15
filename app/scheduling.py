@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 UPDATER_JOB_NAME = 'flight_updater_job'
 
-def create_updater(config):    
+def create_updater(config):
     updater = FlightUpdater()
     updater.initialize(config)
     return updater
@@ -46,7 +46,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
 
     def my_listener(event):
         if event.code == EVENT_JOB_MAX_INSTANCES and event.job_id == UPDATER_JOB_NAME:
-            logger.warn('Updater could not be started, previous is still running')
+            logger.warning('Skipping updater cycle - previous still running')
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     

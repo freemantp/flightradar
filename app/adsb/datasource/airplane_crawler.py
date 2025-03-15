@@ -5,9 +5,10 @@ from .openskynet import OpenskyNet
 from .militarymodes_eu import MilitaryModeS
 from .secret_base import SecretBasesUk
 from .modesmixer import ModeSMixer
-from ..db.basestationdb import BaseStationDB
+from ..db.basestation_mongodb import BaseStationMongoDB
 from ..util.tabular import Tabular
 from ..util.logging import init_logging
+from ...config import app_state
 
 import logging
 from os import path
@@ -28,13 +29,8 @@ class AirplaneCrawler:
 
         init_logging(config.LOGGING_CONFIG)
 
-        db_file = path.join(config.DATA_FOLDER, 'BaseStation.sqb')
-
-        if path.exists(db_file):
-            self.bs_db = BaseStationDB(db_file)
-        else:
-            logger.error('database file not found: {:s}'.format(db_file))
-
+        # Initialize MongoDB connection
+        self.bs_db = BaseStationMongoDB(app_state.mongodb)
         assert self.bs_db
 
         #TODO: use app.modes_util instead of instantiating it for each source

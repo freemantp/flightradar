@@ -2,10 +2,11 @@ beautifulsoup4==4.12.3
 fastapi==0.104.1
 uvicorn==0.23.2
 APScheduler==3.10.4
-sqlmodel==0.0.22
 python-dateutil==2.9.0.post0
 pytz==2024.1
 requests==2.32.0
-orjson==3.10.1
 py-automapper==1.2.3
 typer==0.15.1
+pymongo==4.6.1
+pydantic==2.5.2
+certifi==2025.1.31

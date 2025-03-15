@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Request, Query, Path, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import List, Dict, Optional, Any, Union
-from sqlmodel import Session, select
 from pydantic import BaseModel
+from pymongo.database import Database
+from bson import ObjectId
 
 from . import router
 from .mappers import toFlightDto
 from .apimodels import FlightDto
-from .. import get_db
-from .. adsb.db.dbrepository import DBRepository
+from .. import get_mongodb
+from .. adsb.db.mongodb_repository import MongoDBRepository
 from .. exceptions import ValidationError
-from .. adsb.db.dbmodels import Flight
 from .. scheduling import UPDATER_JOB_NAME
 
 # Define response models
@@ -32,7 +32,12 @@ class PositionReport(BaseModel):
 
 @router.get('/info', response_model=Dict[str, Any])
 def get_meta_info(request: Request):
-    return request.app.state.metaInfo.__dict__
+    # Returns the meta information in snake_case format
+    meta_info = request.app.state.metaInfo
+    return {
+        "commit_id": meta_info.commit_id,
+        "build_timestamp": meta_info.build_timestamp
+    }
 
 
 @router.get('/alive')
@@ -54,53 +59,41 @@ def get_flights(
     request: Request,
     filter: Optional[str] = Query(None, description="Filter flights (e.g. 'mil' for military only)"),
     limit: Optional[int] = Query(None, description="Maximum number of flights to return"),
-    db: Session = Depends(get_db)
+    mongodb: Database = Depends(get_mongodb)
 ):
     try:
+        pipeline = []
+        
+        # Apply filter
         if filter == 'mil':
-            statement = (
-                select(Flight)
-                .where(Flight.is_military == True)
-                .order_by(Flight.first_contact.desc())
-            )
-            if limit:
-                statement = statement.limit(limit)
+            pipeline.append({"$match": {"is_military": True}})
+        
+        # Sort by first contact descending
+        pipeline.append({"$sort": {"first_contact": -1}})
+        
+        # Apply limit if specified
+        if limit:
+            pipeline.append({"$limit": limit})
+            
+        flights = list(mongodb.flights.aggregate(pipeline))
+        return [toFlightDto(f) for f in flights]
 
-            flights = db.exec(statement).all()
-            return [toFlightDto(f) for f in flights]
-        else:
-            statement = (
-                select(Flight)
-                .order_by(Flight.first_contact.desc())
-            )
-            if limit:
-                statement = statement.limit(limit)
-
-            flights = db.exec(statement).all()
-            return [toFlightDto(f) for f in flights]
-
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid arguments")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid arguments: {str(e)}")
 
 
 @router.get('/flights/{flight_id}', response_model=FlightDto)
-def get_flight(flight_id: int, db: Session = Depends(get_db)):
+def get_flight(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
-        statement = (
-            select(Flight)
-            .where(Flight.id == flight_id)
-            .order_by(Flight.last_contact.desc())
-            .limit(1)
-        )
-
-        flight = db.exec(statement).first()
+        flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
+        
         if flight:
             return toFlightDto(flight)
         else:
             raise HTTPException(status_code=404, detail="Flight not found")
 
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid arguments")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid flight ID format: {str(e)}")
 
 
 @router.get('/positions/live', response_model=Dict[str, Any])
@@ -110,16 +103,26 @@ def get_live_positions(request: Request):
 
 
 @router.get('/flights/{flight_id}/positions', response_model=List[List[Union[float, int]]])
-def get_positions(flight_id: int, db: Session = Depends(get_db)):
+def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
-        if DBRepository.flight_exists(db, flight_id):
-            positions = DBRepository.get_positions(db, flight_id)
-            return [[p.lat, p.lon, p.alt if p.alt is not None else -1] for p in positions]
-        else:
+        # Check if flight exists
+        flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
+        if not flight:
             raise HTTPException(status_code=404, detail="Flight not found")
+        
+        # Get positions
+        positions = mongodb.positions.find({"flight_id": ObjectId(flight_id)}).sort("timestmp", 1)
+        
+        # Convert to list format suitable for JSON serialization
+        position_list = []
+        for p in positions:
+            alt = p["alt"] if p["alt"] is not None else -1
+            position_list.append([p["lat"], p["lon"], alt])
+        
+        return position_list
 
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid flight id format")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid flight id format: {str(e)}")
 
 
 @router.get('/positions')
@@ -127,9 +130,11 @@ def get_all_positions(
     request: Request,
     archived: bool = Query(False, description="Include archived positions"),
     filter: Optional[str] = Query(None, description="Filter positions (e.g. 'mil' for military only)"),
-    db: Session = Depends(get_db)
+    mongodb: Database = Depends(get_mongodb)
 ):
-    positions = DBRepository.get_all_positions(db, archived)
+    # Use MongoDB aggregation to get all positions grouped by flight
+    repo = MongoDBRepository(mongodb)
+    positions = repo.get_all_positions(archived)
 
     # Filter positions by military if requested
     if filter == 'mil':

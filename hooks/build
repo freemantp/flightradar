@@ -1,4 +1,6 @@
 #!/bin/bash 
 
 #see https://docs.docker.com/docker-hub/builds/advanced/
-docker build -t $IMAGE_NAME --build-arg COMMIT_ID=$SOURCE_COMMIT .
+# Use short commit ID (first 8 characters)
+SHORT_COMMIT=${SOURCE_COMMIT:0:8}
+docker build -t $IMAGE_NAME --build-arg COMMIT_ID=$SHORT_COMMIT .

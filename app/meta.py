@@ -7,8 +7,8 @@ class MetaInformation:
 
     """ Application configuration """
 
-    COMMIT_ID = None
-    BUILD_TIMESTAMP = None
+    commit_id = None
+    build_timestamp = None
 
     def __init__(self):
 
@@ -22,8 +22,13 @@ class MetaInformation:
         with open(filename, 'r') as json_file:
             config = json.load(json_file)
 
-            if 'gitCommitId' in config:
-                self.COMMIT_ID = config['gitCommitId']
+            # Support both camelCase and snake_case for backwards compatibility
+            if 'commit_id' in config:
+                self.commit_id = config['commit_id']
+            elif 'gitCommitId' in config:
+                self.commit_id = config['gitCommitId']
 
-            if 'buildTimestamp' in config:
-                self.BUILD_TIMESTAMP = config['buildTimestamp']
+            if 'build_timestamp' in config:
+                self.build_timestamp = config['build_timestamp']
+            elif 'buildTimestamp' in config:
+                self.build_timestamp = config['buildTimestamp']

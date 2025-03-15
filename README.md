@@ -23,8 +23,8 @@ The application can either be configured by enviroment variables or by a config 
 
 1. Copy the ```config.json``` from contrib/samples to the project root
 2. Configure host/port of your radar server
-3. Set the path to your data folder. It must contain BaseStation.sqb (not included, [get it here](https://data.flightairmap.com/)) and mil_ranges.csv. Example ``` "dataFolder" : "/path/to/installation/resources/",```
-4. Chose whether you want to track military planes only
+4. Choose whether you want to track military planes only
+5. Configure MongoDB as your database (see Database Configuration below)
 
 ### Enviroment variables
 
@@ -36,6 +36,27 @@ See section below for details
 * MIL_ONLY
 * DB_RETENTION_MIN
 * UNKNOWN_AIRCRAFT_CRAWLING
+* MONGODB_URI
+* MONGODB_DB_NAME
+
+### Database Configuration
+
+The application uses MongoDB for data storage, with time-series collections for efficient position data storage:
+
+Configure MongoDB in your config.json:
+```json
+"database": {
+    "mongodb_uri": "mongodb://localhost:27017/",
+    "mongodb_db_name": "flightradar"
+}
+```
+
+Or set these environment variables:
+```
+MONGODB_URI=mongodb://localhost:27017/
+MONGODB_DB_NAME=flightradar
+```
+
 
 ### Config options
 
@@ -47,14 +68,16 @@ See section below for details
 | ```militaryOnly```         | yes      | false         | Whether everything other than military planes should be filtered (true or false)                                                                                                                                                                                                                                                   |
 | ```deleteAfterMinutes```   | yes      | 1440          | Determines how many minutes after the last signal was received should the the flight in the dababase be retained before it's deleted. Set to 0 to keep entries indefinitely                                                                                                                                                        |
 | ```logging```              | yes      |               | ```syslogHost``` The host to send logs to<br>```syslogFormat``` The syslog log format<br>```logLevel``` [optional] Log level, See [here](https://docs.python.org/2/library/logging.html#logging-levels) for more infos<br>```logToConsole``` [optional] If true, logs are logged to syslog and to console, if false only to syslog |
-| ```crawlUnknownAircraft``` | yes      | false         | If true, aircraft not found in BaseStation.sqb will be looked up in various data sources in the web. Since this method uses crawling which might now always be allowed. Beware: This could potentially lead to blockage of your IP address                                                                                         |
+| ```crawlUnknownAircraft``` | yes      | false         | If true, aircraft not found in the database will be looked up in various data sources on the web. Since this method uses crawling which might not always be allowed, beware: This could potentially lead to blocking of your IP address                                                                                         |
 | ```googleMapsApiKey```     | no       |               | The map view needs an API key to render the map. You can get one [here](https://developers.google.com/maps/documentation/javascript/get-api-key).                           
 
 ## Running Flightradar
 
 ### Initializing the database
 
-flightradar uses an Sqlite3 database (resources/flights.sqlite) to store flight information. You have to create and initialize the database with its schema first. When building a docker image, the database is initialized upon build time. 
+Flightradar needs to initialize the MongoDB database schema before first use. When building a docker image, the database is initialized upon build time.
+
+The app will create the required collections and indexes in the specified MongoDB database, including time-series collections for efficient position data storage.
 
 Initialize schema:
 ```
@@ -84,6 +107,4 @@ When running the application on Windows, consider the following:
 * Use ```SET``` instead of ```export``` when using Windows
 
 ## Known issues
-* Performance may suffer if you have a lot of flights in your database. There's a lot of potential for improvement in the persistence layer.
-* If you're running it in a Docker container, the flight db runs in the same container. Adding the possibility to externalize it might be a good idea 
 

@@ -1,15 +1,15 @@
 from .apimodels import FlightDto, AircraftDto, to_datestring
-from ..adsb.db.dbmodels import Flight
+from typing import Dict, Any
 from ..adsb.aircraft import Aircraft
 
 
-def toFlightDto(flight: Flight) -> FlightDto:
+def toFlightDto(flight: Dict[str, Any]) -> FlightDto:
     return FlightDto(
-        id=flight.id,
-        icao24=flight.modeS,
-        cls=flight.callsign,
-        lstCntct=to_datestring(flight.last_contact),
-        firstCntct=to_datestring(flight.first_contact)
+        id=str(flight["_id"]),
+        icao24=flight["modeS"],
+        cls=flight.get("callsign"),
+        lstCntct=to_datestring(flight["last_contact"]),
+        firstCntct=to_datestring(flight["first_contact"])
     )
 
 

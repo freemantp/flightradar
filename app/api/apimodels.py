@@ -12,7 +12,7 @@ def to_datestring(obj: datetime) -> str:
         return obj.isoformat('T') + 'Z'
 
 class FlightDto(BaseModel):
-    id: int
+    id: str
     icao24: str
     cls: Optional[str] = None
     lstCntct: str

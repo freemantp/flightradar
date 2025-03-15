@@ -8,7 +8,7 @@ logger = logging.getLogger("Config")
 
 # Global app state to be used across modules
 class AppState:
-    db_engine = None
+    mongodb = None
     
 app_state = AppState()
 
@@ -58,6 +58,10 @@ class Config:
     DB_RETENTION_MIN = 1440
     LOGGING_CONFIG = None
     UNKNOWN_AIRCRAFT_CRAWLING = False
+    
+    # Database configuration
+    MONGODB_URI = 'mongodb://localhost:27017/'
+    MONGODB_DB_NAME = 'flightradar'
 
     def __init__(self, config_file='config.json'):
 
@@ -89,6 +93,8 @@ class Config:
         ENV_DB_RETENTION_MIN = 'DB_RETENTION_MIN'
         ENV_UNKNOWN_AIRCRAFT_CRAWLING = 'UNKNOWN_AIRCRAFT_CRAWLING'
         ENV_LOGGING_CONFIG = 'LOGGING_CONFIG'
+        ENV_MONGODB_URI = 'MONGODB_URI'
+        ENV_MONGODB_DB_NAME = 'MONGODB_DB_NAME'
 
         if os.environ.get(ENV_DATA_FOLDER):
             self.DATA_FOLDER = os.environ.get(ENV_DATA_FOLDER)
@@ -111,6 +117,10 @@ class Config:
                 self.LOGGING_CONFIG = LoggingConfig.from_json(logging_json)
             except ValueError as e:
                 logging.getLogger().error(e)
+        if os.environ.get(ENV_MONGODB_URI):
+            self.MONGODB_URI = os.environ.get(ENV_MONGODB_URI)
+        if os.environ.get(ENV_MONGODB_DB_NAME):
+            self.MONGODB_DB_NAME = os.environ.get(ENV_MONGODB_DB_NAME)
         self.config_src = ConfigSource.ENV
 
     def from_file(self, filename):
@@ -142,6 +152,13 @@ class Config:
                     self.LOGGING_CONFIG = LoggingConfig.from_json(config['logging'])
                 except ValueError as e:
                     logging.getLogger().error(e)
+                    
+            if 'database' in config:
+                db_config = config['database']
+                if 'mongodb_uri' in db_config:
+                    self.MONGODB_URI = db_config['mongodb_uri']
+                if 'mongodb_db_name' in db_config:
+                    self.MONGODB_DB_NAME = db_config['mongodb_db_name']
 
             self.config_src = ConfigSource.FILE
 
