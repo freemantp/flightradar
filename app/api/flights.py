@@ -13,6 +13,9 @@ from .. adsb.db.mongodb_repository import MongoDBRepository
 from .. exceptions import ValidationError
 from .. scheduling import UPDATER_JOB_NAME
 
+# Constants
+MAX_FLIGHTS_LIMIT = 100
+
 # Define response models
 
 
@@ -63,18 +66,22 @@ def get_flights(
 ):
     try:
         pipeline = []
-        
+
         # Apply filter
         if filter == 'mil':
             pipeline.append({"$match": {"is_military": True}})
-        
+
         # Sort by first contact descending
         pipeline.append({"$sort": {"first_contact": -1}})
-        
-        # Apply limit if specified
-        if limit:
-            pipeline.append({"$limit": limit})
-            
+
+        # Apply limit (default and max limit is MAX_FLIGHTS_LIMIT)
+        if limit is not None:
+            applied_limit = min(limit, MAX_FLIGHTS_LIMIT)
+        else:
+            applied_limit = MAX_FLIGHTS_LIMIT
+
+        pipeline.append({"$limit": applied_limit})
+
         flights = list(mongodb.flights.aggregate(pipeline))
         return [toFlightDto(f) for f in flights]
 
@@ -86,7 +93,7 @@ def get_flights(
 def get_flight(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
         flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
-        
+
         if flight:
             return toFlightDto(flight)
         else:
@@ -109,16 +116,16 @@ def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
         flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
         if not flight:
             raise HTTPException(status_code=404, detail="Flight not found")
-        
+
         # Get positions
         positions = mongodb.positions.find({"flight_id": ObjectId(flight_id)}).sort("timestmp", 1)
-        
+
         # Convert to list format suitable for JSON serialization
         position_list = []
         for p in positions:
             alt = p["alt"] if p["alt"] is not None else -1
             position_list.append([p["lat"], p["lon"], alt])
-        
+
         return position_list
 
     except Exception as e:
