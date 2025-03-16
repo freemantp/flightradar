@@ -49,7 +49,7 @@ class MongoDBRepository:
     def _ensure_indexes(self):
         """Create indexes for better query performance"""
         # Flights collection indexes
-        self.flights_collection.create_index([("modeS", 1)])
+        self.flights_collection.create_index("modeS", unique=True)  # Ensure modeS is unique
         self.flights_collection.create_index([("archived", 1), ("last_contact", 1)])
 
         # Positions collection indexes

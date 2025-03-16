@@ -28,10 +28,10 @@ class BaseStationMongoDB:
             # Extract the key fields needed for the Aircraft object
             # Aircraft class constructor only needs these fields
             return Aircraft(
-                result["modeS"], 
-                result.get("registration"), 
-                result.get("icaoTypeCode"), 
-                result.get("type"), 
+                result["modeS"],
+                result.get("registration"),
+                result.get("icaoTypeCode"),
+                result.get("type"),
                 result.get("registeredOwners")
             )
         else:
@@ -67,7 +67,7 @@ class BaseStationMongoDB:
             
             if update_dict:
                 result = self.db[self.collection_name].update_one(
-                    {"modeS": aircraft.modes_hex}, 
+                    {"modeS": aircraft.modes_hex},
                     {"$set": update_dict}
                 )
                 return result.modified_count > 0
