@@ -111,35 +111,28 @@ def get_flight(flight_id: str, mongodb: Database = Depends(get_mongodb)):
         raise HTTPException(status_code=400, detail=f"Invalid flight ID format: {str(e)}")
 
 
-@router.get('/positions/live', response_model=Dict[str, Any])
-def get_live_positions(request: Request):
-    """Legacy REST endpoint to get current positions"""
-    cached_flights = request.app.state.updater.get_cached_flights()
-    return {str(k): v.__dict__ for k, v in cached_flights.items()}
-
-
 @router.websocket('/ws/positions/live')
 async def websocket_positions(websocket: WebSocket):
     """WebSocket endpoint for real-time position updates"""
     # Get application state from the WebSocket scope
     app = websocket.app
-    
+
     # Register the broadcast function if not already registered
     if not hasattr(app.state, "ws_broadcast_registered"):
         def broadcast_positions(positions_dict):
             """Function to broadcast positions to all connected clients"""
-            logger.info(f"WebSocket callback triggered with {len(positions_dict)} positions")
-            
+            logger.debug(f"WebSocket callback triggered with {len(positions_dict)} positions")
+
             # Use a thread for handling the async operation from a sync context
             import threading
-            
+
             def run_in_thread(positions_data):
                 import asyncio
-                
+
                 # Create a new event loop for this thread
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                
+
                 try:
                     # Run the coroutine in this thread's event loop
                     loop.run_until_complete(connection_manager.broadcast_positions(positions_data))
@@ -147,7 +140,7 @@ async def websocket_positions(websocket: WebSocket):
                     logger.error(f"Error in WebSocket broadcast thread: {str(e)}", exc_info=True)
                 finally:
                     loop.close()
-            
+
             # Start a dedicated thread for this broadcast
             broadcast_thread = threading.Thread(
                 target=run_in_thread,
@@ -155,21 +148,21 @@ async def websocket_positions(websocket: WebSocket):
                 daemon=True
             )
             broadcast_thread.start()
-        
+
         # Register the callback with the flight updater
         app.state.updater.register_websocket_callback(broadcast_positions)
         app.state.ws_broadcast_registered = True
         logger.info("WebSocket broadcast callback registered with updater")
-    
+
     # Accept the WebSocket connection
     await connection_manager.connect(websocket)
-    
+
     try:
         # Send initial positions immediately after connection
         # For initial connection, we send all current positions with full data
         cached_flights = app.state.updater.get_cached_flights()
         initial_positions = {str(k): v.__dict__ for k, v in cached_flights.items()}
-        
+
         # Add a message type to indicate this is the initial full data set
         message = {
             "type": "initial",
@@ -177,7 +170,7 @@ async def websocket_positions(websocket: WebSocket):
             "positions": initial_positions
         }
         await websocket.send_json(message)
-        
+
         # Keep the connection alive
         while True:
             # Wait for client messages (ping/pong handled automatically)

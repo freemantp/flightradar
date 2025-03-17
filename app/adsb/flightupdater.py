@@ -206,26 +206,24 @@ class FlightUpdater:
                     # Broadcast positions via WebSocket if callback is registered
                     if self._websocket_callback and self._positions_changed:
                         websocket_start = timer()
-                        
+
                         # Get all cached flights
                         all_cached_flights = self.get_cached_flights()
-                        
+
                         # Log debug information about changed flight IDs
-                        logger.info(f"Changed flight IDs: {len(self._changed_flight_ids)}, All cached flights: {len(all_cached_flights)}")
-                        
+                        logger.info(
+                            f"Changed flight IDs: {len(self._changed_flight_ids)}, All cached flights: {len(all_cached_flights)}")
+
                         # Only include the flights that have changed positions
-                        changed_positions = {str(k): v 
-                                           for k, v in all_cached_flights.items() 
-                                           if str(k) in self._changed_flight_ids}
-                        
-                        # Log how many positions we're about to send
-                        logger.info(f"Sending {len(changed_positions)} changed positions to WebSocket clients")
-                        
+                        changed_positions = {str(k): v
+                                             for k, v in all_cached_flights.items()
+                                             if str(k) in self._changed_flight_ids}
+
                         # If no changed positions match cached flights, use all positions for this update
                         if not changed_positions and all_cached_flights:
                             logger.warning("No changed positions match cached flights - sending all positions instead")
                             changed_positions = all_cached_flights
-                        
+
                         # For update messages, only include lat, lon, and alt for efficiency
                         positions_dict = {
                             k: {
@@ -239,7 +237,7 @@ class FlightUpdater:
                         try:
                             # Only use a separate thread if we have data to send
                             if positions_dict:
-                                logger.info(f"Broadcasting {len(positions_dict)} positions via WebSocket")
+                                logger.debug(f"Broadcasting {len(positions_dict)} positions via WebSocket")
                                 # Call the callback directly
                                 self._websocket_callback(positions_dict)
                             else:
@@ -316,7 +314,7 @@ class FlightUpdater:
 
                 # Mark that positions have changed (for WebSocket)
                 self._positions_changed = True
-                
+
                 # Record which flight ID had a position change - ensure it's stored as a string
                 self._changed_flight_ids.add(str(flight_id))
 
@@ -395,10 +393,10 @@ class FlightUpdater:
                         is_military=self._mil_ranges.is_military(f.icao24)
                     )
                     flight_id = str(flight_obj["_id"])
-                    
+
                     # Update in-memory map
                     self.modeS_flightid_map[f.icao24] = flight_id
-                    
+
                     # Check if this was an insert or update
                     if flight_obj.get("first_contact") == flight_obj.get("last_contact"):
                         # Only add to inserted_flights if it's a new record
