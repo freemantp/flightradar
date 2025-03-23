@@ -46,11 +46,10 @@ def configure_scheduling(app: FastAPI, conf: Config):
 
     def my_listener(event):
         if event.code == EVENT_JOB_MAX_INSTANCES and event.job_id == UPDATER_JOB_NAME:
-            logger.warning('Skipping updater cycle - previous still running')
+            logger.debug('Skipping updater cycle - previous still running')
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
-    # Add jobs to scheduler
     scheduler.add_job(
         id=UPDATER_JOB_NAME,
         func=lambda: app.state.updater.update(),
@@ -60,7 +59,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
         coalesce=True
     )
 
-    if conf.UNKNOWN_AIRCRAFT_CRAWLING and conf.RADAR_SERVICE_TYPE == 'mm2': # TODO enable vrs
+    if conf.UNKNOWN_AIRCRAFT_CRAWLING:
         crawler = AirplaneCrawler(conf)
         app.state.crawler = crawler
 
@@ -73,5 +72,4 @@ def configure_scheduling(app: FastAPI, conf: Config):
             coalesce=True
         )
 
-    # Start the scheduler
     scheduler.start()

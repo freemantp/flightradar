@@ -1,7 +1,6 @@
 import logging
 import threading
-import asyncio
-from typing import Any, Dict, List, Optional, Callable, Set
+from typing import Any, Dict, List, Callable, Set
 from time import sleep
 from datetime import datetime, timedelta
 from timeit import default_timer as timer
@@ -27,16 +26,12 @@ class FlightUpdater:
         self.is_updating = False
         self.sleep_time = 1
         self._t = None
-        self._websocket_callback: Optional[Callable] = None
+        self._websocket_callbacks: Set[Callable] = set()
         self._previous_positions: Dict[str, PositionReport] = {}
         self._positions_changed = False
-        self._changed_flight_ids: Set[str] = set()  # Track which flight IDs have changed
+        self._changed_flight_ids: Set[str] = set()
 
     def initialize(self, config):
-        # Don't reset these values from __init__
-        # self.sleep_time = 1
-        # self._t = None
-
         if config.RADAR_SERVICE_TYPE == 'mm2':
             self._service = ModeSMixer(config.RADAR_SERVICE_URL)
         elif config.RADAR_SERVICE_TYPE == 'vrs':
@@ -50,22 +45,19 @@ class FlightUpdater:
         self._mil_only = config.MILTARY_ONLY
         self.interrupted = False
 
-        # Configure batch size for performance
-        self._insert_batch_size = 200  # Increased from 50 for better bulk performance
+        self._insert_batch_size = 200
         self._delete_after = config.DB_RETENTION_MIN
 
-        # Cleanup optimization
         self._cleanup_counter = 0
-        self._cleanup_frequency = 10  # Only cleanup every 10 updates
+        self._cleanup_frequency_sec = 10
 
-        # MongoDB repository
         self.db_repo = MongoDBRepository(app_state.mongodb)
 
         # Lookup structures
         self.modeS_flightid_map = dict()
         self.flight_lastpos_map = dict()
         self.flight_last_contact = dict()
-        self.positions_hash = set()  # Track position hashes to avoid duplicates
+        self.positions_hash = set()
         self._initialize_from_db()
 
     def is_service_alive(self):
@@ -83,7 +75,17 @@ class FlightUpdater:
         Register a callback function to notify when positions are updated
         The callback will receive a dictionary of flight IDs mapped to position reports
         """
-        self._websocket_callback = callback
+        self._websocket_callbacks.add(callback)
+        return callback
+        
+    def unregister_websocket_callback(self, callback: Callable[[Dict[str, Any]], None]):
+        """
+        Unregister a previously registered callback
+        """
+        if callback in self._websocket_callbacks:
+            self._websocket_callbacks.remove(callback)
+            return True
+        return False
 
     def cleanup_items(self):
         if self._delete_after > 0:
@@ -152,7 +154,6 @@ class FlightUpdater:
                 pos_hash = hash((round(position["lat"], 5), round(position["lon"], 5), position.get("alt")))
                 self.positions_hash.add(pos_hash)
 
-            # If we got fewer results than page_size, we're done
             if len(results) < page_size:
                 more_results = False
 
@@ -166,7 +167,7 @@ class FlightUpdater:
         try:
             self.is_updating = True
             self._positions_changed = False
-            self._changed_flight_ids.clear()  # Reset the changed flight IDs set
+            self._changed_flight_ids.clear() 
 
             # Measure service time
             start_time = timer()
@@ -183,11 +184,10 @@ class FlightUpdater:
             try:
                 if positions:
                     # Filter once at the beginning
-                    # First filter for military modeS if needed
                     filtered_pos = [pos for pos in positions if self._mil_ranges.is_military(
                         pos.icao24)] if self._mil_only else positions
 
-                    # Then separate valid positions with coordinates for more efficient processing
+                    # Separate valid positions with coordinates for more efficient processing
                     valid_positions = [p for p in filtered_pos if p.lat and p.lon]
 
                     # Update flights
@@ -203,14 +203,12 @@ class FlightUpdater:
                     self.add_positions(valid_positions)
                     position_update_time = timer() - position_start
 
-                    # Broadcast positions via WebSocket if callback is registered
-                    if self._websocket_callback and self._positions_changed:
+                    # Broadcast positions via WebSocket if callbacks are registered
+                    if self._websocket_callbacks and self._positions_changed:
                         websocket_start = timer()
 
-                        # Get all cached flights
                         all_cached_flights = self.get_cached_flights()
 
-                        # Log debug information about changed flight IDs
                         logger.info(
                             f"Changed flight IDs: {len(self._changed_flight_ids)}, All cached flights: {len(all_cached_flights)}")
 
@@ -224,7 +222,6 @@ class FlightUpdater:
                             logger.warning("No changed positions match cached flights - sending all positions instead")
                             changed_positions = all_cached_flights
 
-                        # For update messages, only include lat, lon, and alt for efficiency
                         positions_dict = {
                             k: {
                                 "lat": v.lat,
@@ -233,13 +230,27 @@ class FlightUpdater:
                             } for k, v in changed_positions.items()
                         }
 
-                        # Trigger the WebSocket callback
+                        # Trigger all WebSocket callbacks
                         try:
-                            # Only use a separate thread if we have data to send
+                            # Only use callbacks if we have data to send
                             if positions_dict:
-                                logger.debug(f"Broadcasting {len(positions_dict)} positions via WebSocket")
-                                # Call the callback directly
-                                self._websocket_callback(positions_dict)
+                                callback_count = len(self._websocket_callbacks)
+                                logger.debug(f"Broadcasting {len(positions_dict)} positions to {callback_count} WebSocket callbacks")
+                                
+                                # Call each callback
+                                callbacks_to_remove = set()
+                                for callback in self._websocket_callbacks:
+                                    try:
+                                        callback(positions_dict)
+                                    except Exception as e:
+                                        logger.error(f"Error in WebSocket callback: {str(e)}")
+                                        # Mark failed callbacks for removal
+                                        callbacks_to_remove.add(callback)
+                                
+                                # Remove any failed callbacks
+                                for callback in callbacks_to_remove:
+                                    self._websocket_callbacks.remove(callback)
+                                    logger.warning(f"Removed failed WebSocket callback, {len(self._websocket_callbacks)} remaining")
                             else:
                                 logger.warning("No positions to broadcast, skipping WebSocket update")
                         except Exception as e:
@@ -247,9 +258,8 @@ class FlightUpdater:
 
                         websocket_time = timer() - websocket_start
 
-                # Run cleanup less frequently to improve performance
                 self._cleanup_counter += 1
-                if self._cleanup_counter >= self._cleanup_frequency:
+                if self._cleanup_counter >= self._cleanup_frequency_sec:
                     cleanup_start = timer()
                     self.cleanup_items()
                     cleanup_time = timer() - cleanup_start
@@ -264,7 +274,6 @@ class FlightUpdater:
             process_time = timer() - process_start
             total_time = service_time + process_time
 
-            # Log timings if the total time exceeds threshold
             if total_time > 0.5:
                 logger.info(
                     f'Flight data times: total={total_time*1000:.2f}ms, '
@@ -295,7 +304,6 @@ class FlightUpdater:
             # Use more efficient position comparison with hash
             pos_hash = hash((round(pos.lat, 5), round(pos.lon, 5), pos.alt))
 
-            # Skip if this position is already in our hash set
             if pos_hash in self.positions_hash:
                 continue
 
@@ -312,13 +320,12 @@ class FlightUpdater:
                 self.flight_last_contact[flight_id] = now
                 self.flight_lastpos_map[flight_id] = pos
 
-                # Mark that positions have changed (for WebSocket)
+                # Positions have changed (for WebSocket)
                 self._positions_changed = True
 
                 # Record which flight ID had a position change - ensure it's stored as a string
                 self._changed_flight_ids.add(str(flight_id))
 
-                # Add to batch operations
                 position_doc = {
                     "flight_id": ObjectId(flight_id),
                     "lat": pos.lat,
@@ -341,7 +348,6 @@ class FlightUpdater:
 
         # Periodically trim the positions hash set to prevent memory growth
         if len(self.positions_hash) > 10000:
-            # Reset when too large to prevent excessive memory usage
             self.positions_hash = set()
 
     def update_flights(self, flights: List[PositionReport]):
@@ -384,7 +390,6 @@ class FlightUpdater:
                 if f.icao24 not in self.modeS_flightid_map:
                     self.modeS_flightid_map[f.icao24] = flight_id
             else:
-                # Use get_or_create_flight instead of direct insert to handle duplicates
                 try:
                     # Create new flight using upsert to avoid duplicate key errors
                     flight_obj = self.db_repo.get_or_create_flight(
