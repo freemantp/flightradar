@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Tuple, Optional, Any, Set
 from pymongo.database import Database
 from pymongo import ReturnDocument, UpdateOne
@@ -51,11 +51,23 @@ class MongoDBRepository:
         # Flights collection indexes
         existing_indexes = self.flights_collection.index_information()
         
-        # Only create modeS index if it doesn't exist
-        if "modeS_1" not in existing_indexes:
-            self.flights_collection.create_index("modeS", unique=True)  # Ensure modeS is unique
+        # Drop the existing unique modeS index if it exists
+        if "modeS_1" in existing_indexes:
+            # Check if it's a unique index
+            if existing_indexes["modeS_1"].get("unique", False):
+                # Drop the unique index
+                self.flights_collection.drop_index("modeS_1")
+                # Create a non-unique index
+                self.flights_collection.create_index("modeS", unique=False)
+        else:
+            # Create a non-unique index if it doesn't exist
+            self.flights_collection.create_index("modeS", unique=False)
             
+        # Create index for last_contact and archived flag
         self.flights_collection.create_index([("archived", 1), ("last_contact", 1)])
+        
+        # Create compound index for modeS + callsign for faster lookups
+        self.flights_collection.create_index([("modeS", 1), ("callsign", 1)])
 
         # Positions collection indexes
         self.positions_collection.create_index([("flight_id", 1), ("timestmp", 1)])
@@ -199,19 +211,27 @@ class MongoDBRepository:
         return result
 
     def bulk_update_flights(self, flight_updates: List[Tuple[str, Dict[str, Any]]]) -> None:
-        """Update multiple flights in a single operation"""
+        """Update multiple flights in a single operation with optimized batching"""
         if not flight_updates:
             return
 
-        bulk_ops = []
-        for flight_id, update_data in flight_updates:
-            bulk_ops.append(UpdateOne(
-                {"_id": ObjectId(flight_id)},
-                {"$set": update_data}
-            ))
+        # Use optimal batch size for MongoDB bulk operations
+        # Balances network overhead vs large batch sizes
+        batch_size = 500
+        
+        # Process in batches to avoid large requests that could time out
+        for i in range(0, len(flight_updates), batch_size):
+            batch = flight_updates[i:i+batch_size]
+            
+            bulk_ops = []
+            for flight_id, update_data in batch:
+                bulk_ops.append(UpdateOne(
+                    {"_id": ObjectId(flight_id)},
+                    {"$set": update_data}
+                ))
 
-        if bulk_ops:
-            self.flights_collection.bulk_write(bulk_ops)
+            if bulk_ops:
+                self.flights_collection.bulk_write(bulk_ops, ordered=False)
 
     def update_flight_last_contact(self, flight_id: str, timestamp: datetime) -> None:
         """Update flight's last contact timestamp"""
@@ -221,19 +241,27 @@ class MongoDBRepository:
         )
 
     def bulk_update_flight_last_contacts(self, flight_updates: List[Tuple[str, datetime]]) -> None:
-        """Update last_contact timestamps for multiple flights in one operation"""
+        """Update last_contact timestamps for multiple flights with optimized batching"""
         if not flight_updates:
             return
 
-        bulk_ops = []
-        for flight_id, timestamp in flight_updates:
-            bulk_ops.append(UpdateOne(
-                {"_id": ObjectId(flight_id)},
-                {"$set": {"last_contact": timestamp}}
-            ))
+        # Use optimal batch size for MongoDB bulk operations
+        batch_size = 500
+        
+        # Process in batches to avoid large operations
+        for i in range(0, len(flight_updates), batch_size):
+            batch = flight_updates[i:i+batch_size]
+            
+            bulk_ops = []
+            for flight_id, timestamp in batch:
+                bulk_ops.append(UpdateOne(
+                    {"_id": ObjectId(flight_id)},
+                    {"$set": {"last_contact": timestamp}}
+                ))
 
-        if bulk_ops:
-            self.flights_collection.bulk_write(bulk_ops)
+            if bulk_ops:
+                # Use unordered writes for better performance
+                self.flights_collection.bulk_write(bulk_ops, ordered=False)
 
     def insert_positions(self, positions: List[Dict[str, Any]]) -> None:
         """Insert multiple position documents"""
@@ -241,22 +269,75 @@ class MongoDBRepository:
             self.positions_collection.insert_many(positions)
 
     def get_or_create_flight(self, modeS: str, callsign: Optional[str], is_military: bool) -> Dict[str, Any]:
-        """Get existing flight or create a new one"""
-        now = datetime.utcnow()
-        result = self.flights_collection.find_one_and_update(
-            {"modeS": modeS},
-            {"$set": {
+        """
+        Create a new flight record for an aircraft.
+        In the new design, each flight (even from the same aircraft) gets a new record.
+        """
+        now = datetime.now(timezone.utc)
+        
+        try:
+            # Create a new flight document
+            flight_doc = {
+                "modeS": modeS,
                 "last_contact": now,
-                **({"callsign": callsign} if callsign else {})
-            },
-                "$setOnInsert": {
                 "is_military": is_military,
                 "archived": False,
                 "first_contact": now
-            }},
-            upsert=True,
+            }
+            
+            # Add callsign if provided
+            if callsign:
+                flight_doc["callsign"] = callsign
+                
+            # Insert the new flight
+            result = self.flights_collection.insert_one(flight_doc)
+            
+            # Return the full flight document
+            return self.flights_collection.find_one({"_id": result.inserted_id})
+            
+        except Exception as e:
+            # If insertion failed (probably due to the unique modeS index still existing),
+            # fall back to the old behavior for backward compatibility
+            import logging
+            logger = logging.getLogger("MongoDBRepository")
+            logger.warning(f"Failed to create new flight record, falling back to upsert: {str(e)}")
+            
+            # Use the old upsert behavior
+            result = self.flights_collection.find_one_and_update(
+                {"modeS": modeS},
+                {"$set": {
+                    "last_contact": now,
+                    **({"callsign": callsign} if callsign else {})
+                },
+                    "$setOnInsert": {
+                    "is_military": is_military,
+                    "archived": False,
+                    "first_contact": now
+                }},
+                upsert=True,
+                return_document=ReturnDocument.AFTER
+            )
+            return result
+        
+    def update_flight(self, flight_id: str, callsign: Optional[str] = None, last_contact: Optional[datetime] = None) -> Dict[str, Any]:
+        """Update an existing flight with new information"""
+        update_doc = {}
+        
+        if callsign is not None:
+            update_doc["callsign"] = callsign
+            
+        if last_contact is not None:
+            update_doc["last_contact"] = last_contact
+            
+        if not update_doc:
+            return None
+            
+        result = self.flights_collection.find_one_and_update(
+            {"_id": ObjectId(flight_id)},
+            {"$set": update_doc},
             return_document=ReturnDocument.AFTER
         )
+        
         return result
 
     @staticmethod

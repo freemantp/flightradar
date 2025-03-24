@@ -1,9 +1,8 @@
-import unittest
-import time
 from typing import List
 from unittest.mock import patch, MagicMock
 from bson import ObjectId
-import datetime
+from datetime import datetime, timezone
+
 
 from app.adsb.flightupdater import FlightUpdater
 from app.adsb.model.position_report import PositionReport
@@ -63,8 +62,8 @@ class FlightUpdaterTest(MongoDBBaseTestCase):
             "callsign": "CLLSGN",
             "is_military": False,
             "archived": False,
-            "first_contact": datetime.datetime.utcnow(),
-            "last_contact": datetime.datetime.utcnow()
+            "first_contact": datetime.now(timezone.utc),
+            "last_contact": datetime.now(timezone.utc)
         }
         
         # Run the update
@@ -97,8 +96,8 @@ class FlightUpdaterTest(MongoDBBaseTestCase):
             "callsign": "CLLSGN",
             "is_military": False,
             "archived": False,
-            "first_contact": datetime.datetime.utcnow(),
-            "last_contact": datetime.datetime.utcnow()
+            "first_contact": datetime.now(timezone.utc),
+            "last_contact": datetime.now(timezone.utc)
         }
         
         # Store existing position hash
@@ -162,7 +161,7 @@ class FlightUpdaterTest(MongoDBBaseTestCase):
             "lat": 41.1,
             "lon": 60.1,
             "alt": 1723,
-            "timestmp": datetime.datetime.utcnow()
+            "timestmp": datetime.now(timezone.utc)
         }
         position2 = {
             "_id": ObjectId(),
@@ -170,7 +169,7 @@ class FlightUpdaterTest(MongoDBBaseTestCase):
             "lat": 44.1,
             "lon": 63.1, 
             "alt": 1923,
-            "timestmp": datetime.datetime.utcnow()
+            "timestmp": datetime.now(timezone.utc)
         }
         
         # Setup the mock to return our test flights

@@ -1,8 +1,7 @@
-import datetime
+from datetime import datetime
 import logging
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError, PyMongoError
-from bson.objectid import ObjectId
 
 from ..aircraft import Aircraft
 
@@ -50,19 +49,19 @@ class BaseStationMongoDB:
                     "icaoTypeCode": aircraft.type1,
                     "type": aircraft.type2,
                     "registeredOwners": aircraft.operator,
-                    "lastModified": datetime.datetime.now()
+                    "lastModified": datetime.now()
                 }
             elif aircraft.is_complete():
                 update_dict = {
                     "registration": aircraft.reg,
                     "icaoTypeCode": aircraft.type1,
                     "type": aircraft.type2,
-                    "lastModified": datetime.datetime.now()
+                    "lastModified": datetime.now()
                 }
             elif aircraft.reg:
                 update_dict = {
                     "registration": aircraft.reg,
-                    "lastModified": datetime.datetime.now()
+                    "lastModified": datetime.now()
                 }
             
             if update_dict:
@@ -83,7 +82,7 @@ class BaseStationMongoDB:
         """Insert new aircraft into database"""
         if acrft:
             try:
-                timestamp = datetime.datetime.now()
+                timestamp = datetime.now()
                 
                 aircraft_doc = {
                     "modeS": acrft.modes_hex,

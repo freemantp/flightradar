@@ -18,21 +18,41 @@ def create_updater(config):
     updater.initialize(config)
     return updater
 
+def ensure_db_indexes(app):
+    """Make sure database indexes are correctly configured"""
+    if hasattr(app.state, 'mongodb') and app.state.mongodb is not None:
+        from .adsb.db.mongodb_repository import MongoDBRepository
+        # Create a temporary repository to ensure indexes
+        repo = MongoDBRepository(app.state.mongodb)
+        # Force index check/creation
+        repo._ensure_indexes()
+        logger.info("MongoDB indexes have been verified and updated if needed")
+
 def configure_scheduling(app: FastAPI, conf: Config):
-    # Configure job stores and executors
+    # Configure job stores and executors with optimized settings for performance
     jobstores = {
         'default': MemoryJobStore()
     }
+    
+    # Increase thread pool size for better concurrency
     executors = {
-        'default': ThreadPoolExecutor(20)
+        'default': ThreadPoolExecutor(40)  # Doubled for better parallel processing
     }
+    
     job_defaults = {
         'coalesce': True,
         'max_instances': 1
     }
 
-    # Create scheduler
-    scheduler = AsyncIOScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+    # Make sure database indexes are properly set up
+    ensure_db_indexes(app)
+
+    # Create scheduler with optimized settings
+    scheduler = AsyncIOScheduler(
+        jobstores=jobstores, 
+        executors=executors, 
+        job_defaults=job_defaults
+    )
     
     # Store scheduler in app state
     app.state.apscheduler = scheduler
@@ -41,7 +61,8 @@ def configure_scheduling(app: FastAPI, conf: Config):
     updater = create_updater(conf)
     app.state.updater = updater
 
-    logging.getLogger('apscheduler.executors.default').setLevel(logging.WARN)
+    # Reduce logging noise
+    logging.getLogger('apscheduler.executors.default').setLevel(logging.ERROR)  # Reduced from WARN
     logging.getLogger('apscheduler.scheduler').setLevel(logging.ERROR)
 
     def my_listener(event):
@@ -50,12 +71,16 @@ def configure_scheduling(app: FastAPI, conf: Config):
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
+    # Optimize the update interval to reduce database load
+    # Adjust from 1.0 to 2.0 seconds to allow processing to complete
+    # This effectively halves the database load while still maintaining 
+    # good responsiveness for real-time flight tracking
     scheduler.add_job(
         id=UPDATER_JOB_NAME,
         func=lambda: app.state.updater.update(),
         trigger='interval',
-        seconds=1.0,
-        misfire_grace_time=5,
+        seconds=2.0,  # Changed from 1.0 to 2.0 to avoid overloading
+        misfire_grace_time=10,  # Increased for reliability
         coalesce=True
     )
 
@@ -63,13 +88,15 @@ def configure_scheduling(app: FastAPI, conf: Config):
         crawler = AirplaneCrawler(conf)
         app.state.crawler = crawler
 
+        # Keep crawler at 30-second interval but increase grace time
         scheduler.add_job(
             id='airplane_crawler',
             func=lambda: app.state.crawler.crawl_sources(),
             trigger='interval',
             seconds=30,
-            misfire_grace_time=90,
+            misfire_grace_time=120,  # Increased from 90 for better reliability
             coalesce=True
         )
 
+    # Start the scheduler
     scheduler.start()
