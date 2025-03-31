@@ -1,6 +1,5 @@
 import unittest
 
-from app.adsb.datasource.adsb_nl import AdsbNL
 from app.adsb.datasource.bazllfr import BazlLFR
 from app.adsb.datasource.militarymodes_eu import MilitaryModeS
 from app.adsb.datasource.openskynet import OpenskyNet
@@ -13,12 +12,6 @@ class ModeSUtilTests(unittest.TestCase):
         self.civilian_hex = '4B19F3'
         self.military_hex = '3B76B3'
         self.military_hex2 = '3F45F3'
-
-    def test_adsbnl(self):
-        sut = AdsbNL('resources')
-        aircraft = sut.query_aircraft(self.military_hex)
-        self.assertIsNotNone(aircraft)
-        self.assertTrue(aircraft.is_complete())
 
     def test_bazl_lfr(self):
         sut = BazlLFR()

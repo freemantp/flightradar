@@ -20,7 +20,7 @@ logger = logging.getLogger('Updater')
 
 class FlightUpdater:
     MINUTES_BEFORE_CONSIDRERED_NEW_FLIGHT = 10
-    _update_lock = threading.RLock()  # Class-level lock for thread safety
+    _update_lock = threading.RLock()
 
     def __init__(self):
         self.is_updating = False
@@ -603,6 +603,7 @@ class FlightUpdater:
                         flight_last_contact, thresh_timestmp
                     )
                     
+                    # Check if the flight is recent enough to be reused
                     if flight_last_contact > comparison_timestamp:
                         # Check for callsign match
                         db_callsign = flight.get("callsign", "").strip().upper() if flight.get("callsign") else ""
@@ -614,6 +615,7 @@ class FlightUpdater:
                         if callsign_match or not new_callsign:
                             matching_flight = flight
                             break
+                    # If the flight is older than the threshold, we'll create a new one
             
             # If no match found, find most recent flight
             if not matching_flight and db_flights:
@@ -624,6 +626,7 @@ class FlightUpdater:
                     flight_last_contact, thresh_timestmp
                 )
                 
+                # Only reuse the flight if it's recent enough
                 if flight_last_contact > comparison_timestamp:
                     # Different callsign with same aircraft = new flight if callsign present
                     db_callsign = most_recent.get("callsign", "").strip().upper() if most_recent.get("callsign") else ""
@@ -633,6 +636,10 @@ class FlightUpdater:
                     else:
                         # Use this flight
                         matching_flight = most_recent
+                else:
+                    # Flight is older than the threshold, create a new one
+                    logger.info(f"Creating new flight for {modeS} as last contact was too old: {flight_last_contact}")
+                    new_flights.append((modeS, f.callsign, self._mil_ranges.is_military(modeS)))
             
             # Process the matching flight if found
             if matching_flight:

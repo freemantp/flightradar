@@ -1,6 +1,5 @@
 from .flightradar24 import Flightradar24
 from .bazllfr import BazlLFR
-from .adsb_nl import AdsbNL
 from .openskynet import OpenskyNet
 from .militarymodes_eu import MilitaryModeS
 from .secret_base import SecretBasesUk
@@ -37,7 +36,6 @@ class AirplaneCrawler:
 
         self.sources = [BazlLFR(), 
             OpenskyNet(), 
-            AdsbNL(config.DATA_FOLDER),
             SecretBasesUk(config.DATA_FOLDER),
             Flightradar24(),
             MilitaryModeS(config.DATA_FOLDER)]

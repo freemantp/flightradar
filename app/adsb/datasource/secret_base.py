@@ -73,11 +73,11 @@ class SecretBasesUk:
             if self.REGISTRATION_FIELD in named_fields:
                 aircraft.reg = named_fields[self.REGISTRATION_FIELD]
 
-            if len(unnamed_fields) == 3 and self.is_sane_field(unnamed_fields[1]) and self.is_sane_field(unnamed_fields[2]):
-                aircraft.operator = unnamed_fields[1]
+            if len(unnamed_fields) == 4 and self.is_sane_field(unnamed_fields[1]) and self.is_sane_field(unnamed_fields[2]):
+                aircraft.operator = unnamed_fields[2]
+                aircraft.type2 = unnamed_fields[3]
+            elif len(unnamed_fields) == 3 and self.is_sane_field(unnamed_fields[1]):
                 aircraft.type2 = unnamed_fields[2]
-            elif len(unnamed_fields) == 2 and self.is_sane_field(unnamed_fields[1]):
-                aircraft.type2 = unnamed_fields[1]
             else:
                 logger.error('Could not parse Fields')
                 return None
