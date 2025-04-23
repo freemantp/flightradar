@@ -12,6 +12,7 @@ from .datasource.dump1090 import Dump1090
 from .util.modes_util import ModesUtil
 from .util.time_util import make_datetimes_comparable
 from .db.mongodb_repository import MongoDBRepository
+from .db.mongodb_init import init_mongodb
 from .model.position_report import PositionReport
 from ..config import app_state
 
@@ -30,6 +31,7 @@ class FlightUpdater:
         self._previous_positions: Dict[str, PositionReport] = {}
         self._positions_changed = False
         self._changed_flight_ids: Set[str] = set()
+        self._use_ttl_indexes = True
 
     def initialize(self, config):
         if config.RADAR_SERVICE_TYPE == 'mm2':
@@ -46,10 +48,23 @@ class FlightUpdater:
         self.interrupted = False
 
         self._insert_batch_size = 200
-        self._delete_after = config.DB_RETENTION_MIN
-
-        self._cleanup_counter = 0
-        self._cleanup_frequency_sec = 10
+        self._retention_minutes = config.DB_RETENTION_MIN
+        
+        # Set auto cleanup flag
+        self._use_ttl_indexes = True
+        logger.info(f"Using MongoDB TTL indexes for document expiration with retention of {self._retention_minutes} minutes")
+        
+        # If retention is <= 0, disable TTL indexes
+        if self._retention_minutes <= 0:
+            self._use_ttl_indexes = False
+            logger.info("Document expiration disabled: no retention period specified")
+            
+        # Initialize MongoDB with TTL indexes
+        app_state.mongodb = init_mongodb(
+            config.MONGODB_URI, 
+            config.MONGODB_DB_NAME,
+            self._retention_minutes if self._use_ttl_indexes else None
+        )
 
         self.db_repo = MongoDBRepository(app_state.mongodb)
 
@@ -103,26 +118,6 @@ class FlightUpdater:
             return True
         return False
 
-    def cleanup_items(self):
-        if self._delete_after > 0:
-            delete_timestamp = datetime.now(timezone.utc) - timedelta(minutes=self._delete_after)
-
-            flights_to_delete = self.db_repo.get_non_archived_flights_older_than(delete_timestamp)
-
-            if flights_to_delete:
-                # Delete from DB
-                flight_ids = [str(f["_id"]) for f in flights_to_delete]
-                self.db_repo.delete_flights_and_positions(flight_ids)
-
-                # Update cache
-                for flight in flights_to_delete:
-                    self.modeS_flightid_map.pop(flight["modeS"], None)
-                    self.flight_lastpos_map.pop(str(flight["_id"]), None)
-                    self.flight_last_contact.pop(str(flight["_id"]), None)
-
-                deleted_msg = ', '.join(['{} (cs={})'.format(str(f["_id"]), f.get("callsign", ""))
-                                        for f in flights_to_delete])
-                logger.info(f'aircraftEvent=delete {deleted_msg}')
 
     def _threshold_timestamp(self):
         """
@@ -164,7 +159,7 @@ class FlightUpdater:
 
                 pos_report = PositionReport(
                     flight["modeS"], position["lat"], position["lon"],
-                    position.get("alt"), 0.0, flight.get("callsign"))
+                    position.get("alt"), position.get("track", 0.0), flight.get("callsign"))
 
                 self.flight_lastpos_map[flight_id] = pos_report
                 self.flight_last_contact[flight_id] = flight["last_contact"]
@@ -188,26 +183,21 @@ class FlightUpdater:
             self._positions_changed = False
             self._changed_flight_ids.clear() 
 
+            # MongoDB TTL indexes handle document expiration automatically
+            
             # Measure service time
             start_time = timer()
             positions = self._service.query_live_flights(False)
             service_time = timer() - start_time
-
+                
             # Short-circuit if no positions
             if not positions:
-                # Reset cycle counters
-                self._cleanup_counter += 1
-                if self._cleanup_counter >= self._cleanup_frequency_sec:
-                    cleanup_start = timer()
-                    self.cleanup_items()
-                    self._cleanup_counter = 0
                 return
 
             # Processing time measurement
             process_start = timer()
             flight_update_time = 0
             position_update_time = 0
-            cleanup_time = 0
             websocket_time = 0
 
             try:
@@ -266,7 +256,8 @@ class FlightUpdater:
                             positions_dict[str(flight_id)] = {
                                 "lat": pos.lat,
                                 "lon": pos.lon,
-                                "alt": pos.alt
+                                "alt": pos.alt,
+                                "track": pos.track
                             }
                     
                     # Fallback if no positions matched (should be rare)
@@ -280,7 +271,8 @@ class FlightUpdater:
                                 positions_dict[str(flight_id)] = {
                                     "lat": pos.lat,
                                     "lon": pos.lon,
-                                    "alt": pos.alt
+                                    "alt": pos.alt,
+                                    "track": pos.track
                                 }
                                 count += 1
                             else:
@@ -305,13 +297,6 @@ class FlightUpdater:
 
                     websocket_time = timer() - websocket_start
 
-                # 5. Cleanup cycle if needed
-                self._cleanup_counter += 1
-                if self._cleanup_counter >= self._cleanup_frequency_sec:
-                    cleanup_start = timer()
-                    self.cleanup_items()
-                    cleanup_time = timer() - cleanup_start
-                    self._cleanup_counter = 0
 
             except (KeyboardInterrupt, SystemExit):
                 raise
@@ -324,14 +309,13 @@ class FlightUpdater:
 
             # Only log if processing took significant time
             if total_time > 0.2:  # Reduced logging threshold
-                logger.info(
+                logger.debug(
                     f'Flight data times: total={total_time*1000:.2f}ms, '
                     f'service={service_time*1000:.2f}ms, '
                     f'process={process_time*1000:.2f}ms '
                     f'(flight={flight_update_time*1000:.2f}ms, '
                     f'position={position_update_time*1000:.2f}ms, '
-                    f'websocket={websocket_time*1000:.2f}ms, '
-                    f'cleanup={cleanup_time*1000:.2f}ms)'
+                    f'websocket={websocket_time*1000:.2f}ms)'
                 )
         finally:
             self.is_updating = False
@@ -468,13 +452,16 @@ class FlightUpdater:
                 self._changed_flight_ids.add(str(flight_id))
                 
                 # Create position document with minimal object creation
-                positions_to_insert.append({
+                position_doc = {
                     "flight_id": ObjectId(flight_id),
                     "lat": pos.lat,
                     "lon": pos.lon,
                     "alt": pos.alt,
+                    "track": pos.track,
                     "timestmp": timestamp
-                })
+                }
+                
+                positions_to_insert.append(position_doc)
                 
                 # Track flight update
                 flight_updates.append((flight_id, timestamp))
@@ -560,14 +547,22 @@ class FlightUpdater:
             timestamp_updates = []
             for modeS in known_modes:
                 flight_id = self.modeS_flightid_map[modeS]
-                timestamp_updates.append((flight_id, now))
+                
+                # Prepare update data
+                update_data = {"last_contact": now}
+                
+                # Add expiration time if TTL indexes are enabled
+                if self._use_ttl_indexes and self._retention_minutes > 0:
+                    update_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
+                
+                timestamp_updates.append((flight_id, update_data))
                 
                 # Update in-memory cache
                 self.flight_last_contact[flight_id] = now
                 
             # Bulk update timestamps in one operation
             if timestamp_updates:
-                self.db_repo.bulk_update_flight_last_contacts(timestamp_updates)
+                self.db_repo.bulk_update_flights(timestamp_updates)
         
         # Skip the database lookup if all modes are known
         if not unknown_modes:
@@ -645,11 +640,22 @@ class FlightUpdater:
             if matching_flight:
                 flight_id = str(matching_flight["_id"])
                 
+                # Update data
+                update_data = {"last_contact": now}
+                
+                # Add expiration time if TTL indexes are enabled
+                if self._use_ttl_indexes and self._retention_minutes > 0:
+                    update_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
+                
                 # Check if callsign needs updating
                 db_callsign = matching_flight.get("callsign", "").strip().upper() if matching_flight.get("callsign") else ""
                 if new_callsign and new_callsign != db_callsign:
-                    callsign_updates.append((flight_id, f.callsign))
+                    update_data["callsign"] = f.callsign
+                    callsign_updates.append((flight_id, update_data))
                     updated_flights.append((modeS, f.callsign))
+                else:
+                    # Just update the timestamp and expiration
+                    callsign_updates.append((flight_id, update_data))
                 
                 # Update in-memory maps
                 self.modeS_flightid_map[modeS] = flight_id
@@ -661,22 +667,27 @@ class FlightUpdater:
         # Process callsign updates in a single batch operation if possible
         if callsign_updates:
             # MongoDB supports bulk operations for callsign updates
-            bulk_updates = []
-            for flight_id, callsign in callsign_updates:
-                bulk_updates.append((flight_id, {"callsign": callsign, "last_contact": now}))
-            
-            if bulk_updates:
-                self.db_repo.bulk_update_flights(bulk_updates)
+            if callsign_updates:
+                self.db_repo.bulk_update_flights(callsign_updates)
         
         # Create new flights in bulk if possible
         if new_flights:
             for modeS, callsign, is_military in new_flights:
                 try:
-                    flight_obj = self.db_repo.get_or_create_flight(
-                        modeS=modeS,
-                        callsign=callsign,
-                        is_military=is_military
-                    )
+                    # Prepare flight data with expiration if enabled
+                    flight_data = {
+                        "modeS": modeS,
+                        "is_military": is_military
+                    }
+                    
+                    if callsign:
+                        flight_data["callsign"] = callsign
+                    
+                    # Add expiration time
+                    if self._use_ttl_indexes and self._retention_minutes > 0:
+                        flight_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
+                    
+                    flight_obj = self.db_repo.get_or_create_flight(**flight_data)
                     flight_id = str(flight_obj["_id"])
                     
                     # Update in-memory maps

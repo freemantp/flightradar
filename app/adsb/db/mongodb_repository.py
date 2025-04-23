@@ -268,7 +268,7 @@ class MongoDBRepository:
         if positions:
             self.positions_collection.insert_many(positions)
 
-    def get_or_create_flight(self, modeS: str, callsign: Optional[str], is_military: bool) -> Dict[str, Any]:
+    def get_or_create_flight(self, modeS: str, is_military: bool, callsign: Optional[str] = None, expire_at: Optional[datetime] = None) -> Dict[str, Any]:
         """
         Create a new flight record for an aircraft.
         In the new design, each flight (even from the same aircraft) gets a new record.
@@ -289,6 +289,10 @@ class MongoDBRepository:
             if callsign:
                 flight_doc["callsign"] = callsign
                 
+            # Add expiration time if provided
+            if expire_at:
+                flight_doc["expire_at"] = expire_at
+                
             # Insert the new flight
             result = self.flights_collection.insert_one(flight_doc)
             
@@ -302,14 +306,22 @@ class MongoDBRepository:
             logger = logging.getLogger("MongoDBRepository")
             logger.warning(f"Failed to create new flight record, falling back to upsert: {str(e)}")
             
+            # Prepare set fields
+            set_fields = {
+                "last_contact": now
+            }
+            
+            if callsign:
+                set_fields["callsign"] = callsign
+                
+            if expire_at:
+                set_fields["expire_at"] = expire_at
+            
             # Use the old upsert behavior
             result = self.flights_collection.find_one_and_update(
                 {"modeS": modeS},
-                {"$set": {
-                    "last_contact": now,
-                    **({"callsign": callsign} if callsign else {})
-                },
-                    "$setOnInsert": {
+                {"$set": set_fields,
+                 "$setOnInsert": {
                     "is_military": is_military,
                     "archived": False,
                     "first_contact": now
