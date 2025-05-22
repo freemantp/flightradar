@@ -231,7 +231,15 @@ class MongoDBRepository:
                 ))
 
             if bulk_ops:
-                self.flights_collection.bulk_write(bulk_ops, ordered=False)
+                try:
+                    self.flights_collection.bulk_write(bulk_ops, ordered=False)
+                except Exception as e:
+                    # Check for MongoDB quota exceeded error
+                    if "you are over your space quota" in str(e):
+                        from ...exceptions import DatabaseException
+                        raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+                    # Re-raise any other exceptions
+                    raise
 
     def update_flight_last_contact(self, flight_id: str, timestamp: datetime) -> None:
         """Update flight's last contact timestamp"""
@@ -260,13 +268,29 @@ class MongoDBRepository:
                 ))
 
             if bulk_ops:
-                # Use unordered writes for better performance
-                self.flights_collection.bulk_write(bulk_ops, ordered=False)
+                try:
+                    # Use unordered writes for better performance
+                    self.flights_collection.bulk_write(bulk_ops, ordered=False)
+                except Exception as e:
+                    # Check for MongoDB quota exceeded error
+                    if "you are over your space quota" in str(e):
+                        from ...exceptions import DatabaseException
+                        raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+                    # Re-raise any other exceptions
+                    raise
 
     def insert_positions(self, positions: List[Dict[str, Any]]) -> None:
         """Insert multiple position documents"""
         if positions:
-            self.positions_collection.insert_many(positions)
+            try:
+                self.positions_collection.insert_many(positions)
+            except Exception as e:
+                # Check for MongoDB quota exceeded error
+                if "you are over your space quota" in str(e):
+                    from ...exceptions import DatabaseException
+                    raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+                # Re-raise any other exceptions
+                raise
 
     def get_or_create_flight(self, modeS: str, is_military: bool, callsign: Optional[str] = None, expire_at: Optional[datetime] = None) -> Dict[str, Any]:
         """
@@ -294,10 +318,18 @@ class MongoDBRepository:
                 flight_doc["expire_at"] = expire_at
                 
             # Insert the new flight
-            result = self.flights_collection.insert_one(flight_doc)
-            
-            # Return the full flight document
-            return self.flights_collection.find_one({"_id": result.inserted_id})
+            try:
+                result = self.flights_collection.insert_one(flight_doc)
+                
+                # Return the full flight document
+                return self.flights_collection.find_one({"_id": result.inserted_id})
+            except Exception as e:
+                # Check for MongoDB quota exceeded error
+                if "you are over your space quota" in str(e):
+                    from ...exceptions import DatabaseException
+                    raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+                # If not quota error, continue with fallback logic
+                raise
             
         except Exception as e:
             # If insertion failed (probably due to the unique modeS index still existing),
@@ -317,19 +349,27 @@ class MongoDBRepository:
             if expire_at:
                 set_fields["expire_at"] = expire_at
             
-            # Use the old upsert behavior
-            result = self.flights_collection.find_one_and_update(
-                {"modeS": modeS},
-                {"$set": set_fields,
-                 "$setOnInsert": {
-                    "is_military": is_military,
-                    "archived": False,
-                    "first_contact": now
-                }},
-                upsert=True,
-                return_document=ReturnDocument.AFTER
-            )
-            return result
+            try:
+                # Use the old upsert behavior
+                result = self.flights_collection.find_one_and_update(
+                    {"modeS": modeS},
+                    {"$set": set_fields,
+                     "$setOnInsert": {
+                        "is_military": is_military,
+                        "archived": False,
+                        "first_contact": now
+                    }},
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER
+                )
+                return result
+            except Exception as e:
+                # Check for MongoDB quota exceeded error
+                if "you are over your space quota" in str(e):
+                    from ...exceptions import DatabaseException
+                    raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+                # Re-raise any other exceptions
+                raise
         
     def update_flight(self, flight_id: str, callsign: Optional[str] = None, last_contact: Optional[datetime] = None) -> Dict[str, Any]:
         """Update an existing flight with new information"""
@@ -343,14 +383,22 @@ class MongoDBRepository:
             
         if not update_doc:
             return None
-            
-        result = self.flights_collection.find_one_and_update(
-            {"_id": ObjectId(flight_id)},
-            {"$set": update_doc},
-            return_document=ReturnDocument.AFTER
-        )
         
-        return result
+        try:    
+            result = self.flights_collection.find_one_and_update(
+                {"_id": ObjectId(flight_id)},
+                {"$set": update_doc},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            return result
+        except Exception as e:
+            # Check for MongoDB quota exceeded error
+            if "you are over your space quota" in str(e):
+                from ...exceptions import DatabaseException
+                raise DatabaseException("MongoDB space quota exceeded: " + str(e)) from e
+            # Re-raise any other exceptions
+            raise
 
     @staticmethod
     def _get_chunks(iterable, chunk_size):

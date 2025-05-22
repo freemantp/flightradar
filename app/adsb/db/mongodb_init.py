@@ -17,7 +17,13 @@ def init_mongodb(connection_string: str, db_name: str, retention_minutes: Option
         else:
             logger.info(f"Connecting to MongoDB")
 
-        client = MongoClient(connection_string, tlsCAFile=certifi.where())
+        # Only add tlsCAFile if ssl or tls are not explicitly set to false
+        lower_conn = connection_string.lower()
+        use_tls = not (("ssl=false" in lower_conn) or ("tls=false" in lower_conn))
+        if use_tls:
+            client = MongoClient(connection_string, tlsCAFile=certifi.where())
+        else:
+            client = MongoClient(connection_string)
 
         # Verify connection by pinging
         client.admin.command('ping')

@@ -301,7 +301,12 @@ class FlightUpdater:
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception as e:
-                logger.exception(f"An error occurred: {str(e)}")
+                from ...exceptions import DatabaseException
+                if isinstance(e, DatabaseException) and "you are over your space quota" in str(e):
+                    logger.error(f"Database quota exceeded: {str(e)}")
+                    # Allow the app to continue without crashing, but log the error
+                else:
+                    logger.exception(f"An error occurred: {str(e)}")
 
             # Calculate processing time
             process_time = timer() - process_start
@@ -518,6 +523,112 @@ class FlightUpdater:
                 updated_msg += f" and {len(all_updated) - 5} more"
             logger.info(f'aircraftEvent=update {updated_msg}')
     
+    def _should_create_new_flight(self, modeS, flight_id, threshold, flights_by_icao=None, new_callsign=None):
+        """Determine if a new flight should be created based on last contact time and callsign"""
+        # Get current flight data
+        if not flight_id or flight_id not in self.flight_last_contact:
+            return True
+            
+        # Get the last contact time for this flight
+        last_contact = self.flight_last_contact[flight_id]
+        
+        # Make timestamps comparable
+        last_contact, threshold_comparable = make_datetimes_comparable(last_contact, threshold)
+        
+        # If the flight is older than threshold, create a new one
+        if last_contact <= threshold_comparable:
+            return True
+            
+        # If we have callsign data, check if callsign changed
+        if flights_by_icao and new_callsign:
+            # We only create a new flight for callsign change if the new callsign exists
+            if new_callsign and modeS in self.modeS_flightid_map:
+                flight_id = self.modeS_flightid_map[modeS]
+                
+                # Get flight from database or lookup the cached callsign 
+                db_flight = None
+                db_callsign = None
+                
+                # Use the flight data if available
+                if hasattr(self, '_flight_callsign_cache') and flight_id in self._flight_callsign_cache:
+                    db_callsign = self._flight_callsign_cache[flight_id]
+                else:
+                    # We need to load it - either from the already fetched flights or from the DB
+                    if modeS in flights_by_icao:
+                        pos = flights_by_icao[modeS]
+                        if hasattr(pos, 'callsign'):
+                            db_callsign = pos.callsign.strip().upper() if pos.callsign else ""
+                
+                # Only create new flight if callsigns are different
+                if db_callsign and new_callsign != db_callsign:
+                    return True
+                    
+        return False
+
+    def _create_flight(self, modeS, callsign, is_military, now, inserted_flights):
+        """Create a new flight entry"""
+        try:
+            # Prepare flight data with expiration if enabled
+            flight_data = {
+                "modeS": modeS,
+                "is_military": is_military
+            }
+            
+            if callsign:
+                flight_data["callsign"] = callsign
+            
+            # Add expiration time
+            if self._use_ttl_indexes and self._retention_minutes > 0:
+                flight_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
+            
+            flight_obj = self.db_repo.get_or_create_flight(**flight_data)
+            flight_id = str(flight_obj["_id"])
+            
+            # Update in-memory maps
+            self.modeS_flightid_map[modeS] = flight_id
+            self.flight_last_contact[flight_id] = now
+            
+            # Update callsign cache if needed
+            if callsign and not hasattr(self, '_flight_callsign_cache'):
+                self._flight_callsign_cache = {}
+            if callsign and hasattr(self, '_flight_callsign_cache'):
+                self._flight_callsign_cache[flight_id] = callsign.strip().upper() if callsign else ""
+                
+            # Track insertion
+            inserted_flights.append((modeS, callsign))
+            return flight_id
+        except Exception as e:
+            logger.error(f"Error creating flight for {modeS}: {str(e)}")
+            return None
+    
+    def _update_flight(self, modeS, flight_id, f, now, update_data, callsign_updates, updated_flights):
+        """Update an existing flight"""
+        # Add new callsign if different
+        new_callsign = f.callsign.strip().upper() if f.callsign else ""
+        
+        # Get existing callsign if available
+        db_callsign = None
+        if hasattr(self, '_flight_callsign_cache') and flight_id in self._flight_callsign_cache:
+            db_callsign = self._flight_callsign_cache[flight_id]
+        
+        # Check if callsign needs updating
+        if new_callsign and db_callsign != new_callsign:
+            update_data["callsign"] = f.callsign
+            callsign_updates.append((flight_id, update_data))
+            updated_flights.append((modeS, f.callsign))
+            
+            # Update callsign cache
+            if not hasattr(self, '_flight_callsign_cache'):
+                self._flight_callsign_cache = {}
+            self._flight_callsign_cache[flight_id] = new_callsign
+        else:
+            # Just update the timestamp and expiration
+            callsign_updates.append((flight_id, update_data))
+        
+        # Update in-memory cache
+        self.modeS_flightid_map[modeS] = flight_id
+        self.flight_last_contact[flight_id] = now
+    
     def _process_flight_batch(self, batch, flights_by_icao, thresh_timestmp, now, inserted_flights, updated_flights):
         """Process a batch of flights for better memory management and performance"""
         # Gather all modeS addresses for this batch
@@ -531,22 +642,33 @@ class FlightUpdater:
         known_modes = set()
         unknown_modes = set()
         
+        # Prepare collections for processing
+        callsign_updates = []
+        new_flights = []
+        modes_to_check = []
+        
+        # First pass: separate known from unknown modes
         for modeS in batch_modes:
             if modeS in self.modeS_flightid_map:
                 flight_id = self.modeS_flightid_map[modeS]
                 if flight_id in self.flight_last_contact:
-                    known_modes.add(modeS)
+                    # Check if known flight needs to be replaced based on age
+                    if self._should_create_new_flight(modeS, flight_id, thresh_timestmp):
+                        # Add to unknown modes for further processing
+                        unknown_modes.add(modeS)
+                    else:
+                        # Keep as known mode
+                        known_modes.add(modeS)
                 else:
                     unknown_modes.add(modeS)
             else:
                 unknown_modes.add(modeS)
                 
-        # Fast path: bulk update known flights with timestamp only
+        # Process known modes - flights we can update directly
         if known_modes:
-            # Prepare timestamp updates
-            timestamp_updates = []
             for modeS in known_modes:
                 flight_id = self.modeS_flightid_map[modeS]
+                f = flights_by_icao[modeS]
                 
                 # Prepare update data
                 update_data = {"last_contact": now}
@@ -555,25 +677,18 @@ class FlightUpdater:
                 if self._use_ttl_indexes and self._retention_minutes > 0:
                     update_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
                 
-                timestamp_updates.append((flight_id, update_data))
+                # Update the flight with all needed changes
+                self._update_flight(modeS, flight_id, f, now, update_data, callsign_updates, updated_flights)
                 
-                # Update in-memory cache
-                self.flight_last_contact[flight_id] = now
-                
-            # Bulk update timestamps in one operation
-            if timestamp_updates:
-                self.db_repo.bulk_update_flights(timestamp_updates)
-        
-        # Skip the database lookup if all modes are known
+        # Skip further processing if no unknown modes
         if not unknown_modes:
+            # Process any callsign updates that were collected
+            if callsign_updates:
+                self.db_repo.bulk_update_flights(callsign_updates)
             return
             
         # Fetch unknown flights in one query
         flights_by_modeS = self.db_repo.get_flights_batch(unknown_modes)
-        
-        # Optimize callsign operations by precomputing
-        callsign_updates = []
-        new_flights = []
         
         # Process each unknown mode
         for modeS in unknown_modes:
@@ -626,15 +741,16 @@ class FlightUpdater:
                     # Different callsign with same aircraft = new flight if callsign present
                     db_callsign = most_recent.get("callsign", "").strip().upper() if most_recent.get("callsign") else ""
                     if new_callsign and db_callsign != new_callsign:
-                        # Create new flight for different callsign
-                        new_flights.append((modeS, f.callsign, self._mil_ranges.is_military(modeS)))
+                        # Mark for creation of new flight with different callsign
+                        matching_flight = None  # Will create new flight in the final check
                     else:
                         # Use this flight
                         matching_flight = most_recent
                 else:
-                    # Flight is older than the threshold, create a new one
-                    logger.info(f"Creating new flight for {modeS} as last contact was too old: {flight_last_contact}")
-                    new_flights.append((modeS, f.callsign, self._mil_ranges.is_military(modeS)))
+                    # Flight is older than the threshold, but don't create it yet
+                    # We'll do that in the final check below to avoid duplication
+                    logger.info(f"Flight for {modeS} is too old: {flight_last_contact}")
+                    matching_flight = None  # Will create new flight in the final check
             
             # Process the matching flight if found
             if matching_flight:
@@ -647,57 +763,26 @@ class FlightUpdater:
                 if self._use_ttl_indexes and self._retention_minutes > 0:
                     update_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
                 
-                # Check if callsign needs updating
-                db_callsign = matching_flight.get("callsign", "").strip().upper() if matching_flight.get("callsign") else ""
-                if new_callsign and new_callsign != db_callsign:
-                    update_data["callsign"] = f.callsign
-                    callsign_updates.append((flight_id, update_data))
-                    updated_flights.append((modeS, f.callsign))
-                else:
-                    # Just update the timestamp and expiration
-                    callsign_updates.append((flight_id, update_data))
+                # Update with the helper method
+                self._update_flight(modeS, flight_id, f, now, update_data, callsign_updates, updated_flights)
                 
-                # Update in-memory maps
-                self.modeS_flightid_map[modeS] = flight_id
-                self.flight_last_contact[flight_id] = now
+                # Cache the callsign for future lookups
+                db_callsign = matching_flight.get("callsign", "").strip().upper() if matching_flight.get("callsign") else ""
+                if not hasattr(self, '_flight_callsign_cache'):
+                    self._flight_callsign_cache = {}
+                self._flight_callsign_cache[flight_id] = db_callsign
             else:
                 # No matching flight found, create a new one
                 new_flights.append((modeS, f.callsign, self._mil_ranges.is_military(modeS)))
         
-        # Process callsign updates in a single batch operation if possible
+        # Process callsign updates in a single batch operation
         if callsign_updates:
-            # MongoDB supports bulk operations for callsign updates
-            if callsign_updates:
-                self.db_repo.bulk_update_flights(callsign_updates)
+            self.db_repo.bulk_update_flights(callsign_updates)
         
-        # Create new flights in bulk if possible
+        # Create new flights in bulk
         if new_flights:
             for modeS, callsign, is_military in new_flights:
-                try:
-                    # Prepare flight data with expiration if enabled
-                    flight_data = {
-                        "modeS": modeS,
-                        "is_military": is_military
-                    }
-                    
-                    if callsign:
-                        flight_data["callsign"] = callsign
-                    
-                    # Add expiration time
-                    if self._use_ttl_indexes and self._retention_minutes > 0:
-                        flight_data["expire_at"] = now + timedelta(minutes=self._retention_minutes)
-                    
-                    flight_obj = self.db_repo.get_or_create_flight(**flight_data)
-                    flight_id = str(flight_obj["_id"])
-                    
-                    # Update in-memory maps
-                    self.modeS_flightid_map[modeS] = flight_id
-                    self.flight_last_contact[flight_id] = now
-                    
-                    # Track insertion
-                    inserted_flights.append((modeS, callsign))
-                except Exception as e:
-                    logger.error(f"Error creating flight for {modeS}: {str(e)}")
+                self._create_flight(modeS, callsign, is_military, now, inserted_flights)
 
     def get_silhouete_params(self):
         return self._service.get_silhouete_params()
