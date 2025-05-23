@@ -1,11 +1,7 @@
 import requests
 from requests.exceptions import HTTPError
-import time
 import logging
-import ssl
-
 from ..aircraft import Aircraft
-from ..util.modes_util import ModesUtil
 
 logger = logging.getLogger('OpenSky')
 

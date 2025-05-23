@@ -19,6 +19,7 @@ class ModeSUtilTests(unittest.TestCase):
         self.assertIsNotNone(aircraft)
         self.assertTrue(aircraft.is_complete2())
 
+    @unittest.skip("This service is flaky")
     def test_militarymodes_eu(self):
         sut = MilitaryModeS('resources')
         aircraft = sut.query_aircraft(self.military_hex2)
@@ -37,6 +38,7 @@ class ModeSUtilTests(unittest.TestCase):
         self.assertIsNotNone(aircraft)
         self.assertTrue(aircraft.is_complete2())  
 
+    @unittest.skip("This service is flaky")
     def test_secretbase(self):
         sut = SecretBasesUk('resources')
         aircraft = sut.query_aircraft(self.military_hex)

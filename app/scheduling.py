@@ -6,7 +6,7 @@ from apscheduler.events import *
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 from .config import Config
-from .adsb.flightupdater import FlightUpdater
+from .adsb.flight_updater_coordinator import FlightUpdaterCoordinator
 from .adsb.datasource.airplane_crawler import AirplaneCrawler
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 UPDATER_JOB_NAME = 'flight_updater_job'
 
 def create_updater(config):
-    updater = FlightUpdater()
+    updater = FlightUpdaterCoordinator()
     updater.initialize(config)
     return updater
 

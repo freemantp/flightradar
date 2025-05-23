@@ -9,7 +9,6 @@ from .meta import MetaInformation
 from .adsb.db.basestation_mongodb import BaseStationMongoDB
 from .adsb.db import init_mongodb
 from .adsb.util.logging import init_logging
-from .adsb.util.modes_util import ModesUtil
 
 from .scheduling import configure_scheduling
 
@@ -53,6 +52,8 @@ def create_app():
     # Store app state
     app.state.config = conf
     app.state.metaInfo = MetaInformation()
+
+    from .adsb.util.modes_util import ModesUtil
     app.state.modes_util = ModesUtil(conf.DATA_FOLDER)
 
     # Add middleware

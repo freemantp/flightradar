@@ -1,10 +1,6 @@
-import json
-import time
 import logging
-import ssl
 import requests
 from requests.exceptions import HTTPError
-
 from bs4 import BeautifulSoup
 
 from ..aircraft import Aircraft
