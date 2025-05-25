@@ -16,13 +16,10 @@ class DatabaseFactory:
         
         if db_type == 'mongodb':
             # Initialize MongoDB
-            retention_minutes = getattr(config, 'DB_RETENTION_MIN', 0)
-            use_ttl_indexes = retention_minutes > 0
-            
             mongodb = init_mongodb(
                 config.MONGODB_URI,
                 config.MONGODB_DB_NAME,
-                retention_minutes if use_ttl_indexes else None
+                config.DB_RETENTION_MIN
             )
             
             return MongoDBDatabaseRepository(MongoDBRepository(mongodb))

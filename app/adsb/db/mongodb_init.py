@@ -1,9 +1,8 @@
 import certifi
 import logging
-from typing import Optional
 from pymongo import MongoClient
 
-def init_mongodb(connection_string: str, db_name: str, retention_minutes: Optional[int] = None):
+def init_mongodb(connection_string: str, db_name: str, retention_minutes: int):
     """Initialize MongoDB connection and create indexes"""
     logger = logging.getLogger("MongoDBInit")
 
