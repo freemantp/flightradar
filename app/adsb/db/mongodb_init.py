@@ -67,22 +67,25 @@ def init_mongodb(connection_string: str, db_name: str, retention_minutes: int):
 
     # Create time series collection for positions if it doesn't exist
     if positions_collection not in db.list_collection_names():
-        # Configure time-series collection with expiration if retention is specified
+        # Configure time-series collection
         timeseries_config = {
             "timeField": "timestmp",
             "metaField": "flight_id",
             "granularity": "seconds"
         }
         
-        # Add expiration setting to time-series collection if retention is specified
+        # Create collection options
+        collection_options = {"timeseries": timeseries_config}
+        
+        # Add expiration setting at collection level if retention is specified
         if retention_minutes and retention_minutes > 0:
-            timeseries_config["expireAfterSeconds"] = retention_minutes * 60
+            collection_options["expireAfterSeconds"] = retention_minutes * 60
             logger.info(f"Creating time-series collection with expireAfterSeconds={retention_minutes * 60}")
         
         # Create the collection with the configured options
         db.create_collection(
             positions_collection,
-            timeseries=timeseries_config
+            **collection_options
         )
         
         # Create index on meta field for faster queries

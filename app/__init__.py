@@ -44,7 +44,8 @@ def create_app():
     # Initialize MongoDB
     mongodb = init_mongodb(
         conf.MONGODB_URI,
-        conf.MONGODB_DB_NAME
+        conf.MONGODB_DB_NAME,
+        conf.DB_RETENTION_MIN
     )
     app.state.mongodb = mongodb
     app_state.mongodb = mongodb

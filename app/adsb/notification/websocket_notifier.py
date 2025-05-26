@@ -53,12 +53,15 @@ class WebSocketNotifier:
         positions_dict = {}
         for flight_id, pos in all_cached_flights.items():
             if str(flight_id) in changed_flight_ids:
-                positions_dict[str(flight_id)] = {
+                position_data = {
                     "lat": pos.lat,
                     "lon": pos.lon,
                     "alt": pos.alt,
                     "track": pos.track
                 }
+                if pos.gs is not None:
+                    position_data["gs"] = pos.gs
+                positions_dict[str(flight_id)] = position_data
         
         # Fallback if no positions matched (should be rare)
         if not positions_dict and all_cached_flights:
@@ -67,12 +70,15 @@ class WebSocketNotifier:
             count = 0
             for flight_id, pos in all_cached_flights.items():
                 if count < 50:  # Limit to 50 positions
-                    positions_dict[str(flight_id)] = {
+                    position_data = {
                         "lat": pos.lat,
                         "lon": pos.lon,
                         "alt": pos.alt,
                         "track": pos.track
                     }
+                    if pos.gs is not None:
+                        position_data["gs"] = pos.gs
+                    positions_dict[str(flight_id)] = position_data
                     count += 1
                 else:
                     break

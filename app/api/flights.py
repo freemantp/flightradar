@@ -233,6 +233,8 @@ async def websocket_flight_positions(websocket: WebSocket, flight_id: str):
                     "lon": pos["lon"],
                     "alt": pos["alt"] if pos["alt"] is not None else -1
                 }
+                if pos.get("gs") is not None:
+                    position_data["gs"] = pos["gs"]
                 all_positions.append(position_data)
             
             # Save the most recent position for comparison with future updates
@@ -278,7 +280,8 @@ async def websocket_flight_positions(websocket: WebSocket, flight_id: str):
             # Only send update if position has changed
             if (last_position["lat"] != new_position["lat"] or 
                 last_position["lon"] != new_position["lon"] or 
-                last_position["alt"] != new_position["alt"]):
+                last_position["alt"] != new_position["alt"] or
+                last_position.get("gs") != new_position.get("gs")):
                 
                 # Update the last known position
                 last_position = new_position

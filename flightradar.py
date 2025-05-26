@@ -16,7 +16,7 @@ def initschema():
     from app.config import Config
 
     conf = Config()
-    mongodb = init_mongodb(conf.MONGODB_URI, conf.MONGODB_DB_NAME)
+    mongodb = init_mongodb(conf.MONGODB_URI, conf.MONGODB_DB_NAME, conf.DB_RETENTION_MIN)
     print("MongoDB database initialized successfully")
 
 
