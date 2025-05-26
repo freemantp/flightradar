@@ -7,7 +7,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 from .config import Config
 from .adsb.flight_updater_coordinator import FlightUpdaterCoordinator
-from .adsb.datasource.airplane_crawler import AirplaneCrawler
+from .adsb.crawler.airplane_crawler import AirplaneCrawler
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,9 @@ def configure_scheduling(app: FastAPI, conf: Config):
         # Keep crawler at 30-second interval but increase grace time
         scheduler.add_job(
             id='airplane_crawler',
-            func=lambda: app.state.crawler.crawl_sources(),
+            func=lambda: app.state.crawler.crawl_sources(
+                app.state.updater.get_live_icao24s() if hasattr(app.state, 'updater') else None
+            ),
             trigger='interval',
             seconds=30,
             misfire_grace_time=120,  # Increased from 90 for better reliability

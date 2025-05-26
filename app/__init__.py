@@ -6,24 +6,24 @@ from contextvars import ContextVar
 
 from .config import Config, app_state
 from .meta import MetaInformation
-from .adsb.db.basestation_mongodb import BaseStationMongoDB
+from .adsb.db.aircraft_repository import AircraftRepository
 from .adsb.db import init_mongodb
 from .adsb.util.logging import init_logging
 
 from .scheduling import configure_scheduling
 
 # Context variables to store request-scoped objects
-basestation_db_var = ContextVar("basestation_db", default=None)
+aircraft_repo_var = ContextVar("aircraft_repo", default=None)
 
 
-def get_basestation_db(request: Request):
-    basestation_db = basestation_db_var.get()
-    if basestation_db is None:
-        basestation_db = BaseStationMongoDB(
+def get_aircraft_repository(request: Request):
+    aircraft_repo = aircraft_repo_var.get()
+    if aircraft_repo is None:
+        aircraft_repo = AircraftRepository(
             request.app.state.mongodb
         )
-        basestation_db_var.set(basestation_db)
-    return basestation_db
+        aircraft_repo_var.set(aircraft_repo)
+    return aircraft_repo
 
 
 def get_mongodb(request: Request):

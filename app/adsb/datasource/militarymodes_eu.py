@@ -3,20 +3,22 @@ import logging
 import ssl
 import requests
 from requests.exceptions import HTTPError
+from typing import Optional
 
 from bs4 import BeautifulSoup
 
 from ..aircraft import Aircraft
 from ..util.modes_util import ModesUtil
+from .aircraft_metadata_source import AircraftMetadataSource
 
 logger = logging.getLogger('MilModeS.eu')
 
 
-class MilitaryModeS:   
+class MilitaryModeS(AircraftMetadataSource):   
 
     """ Live Military Mode S """
 
-    def __init__(self, config_folder):
+    def __init__(self, config_folder: str) -> None:
 
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
@@ -29,13 +31,13 @@ class MilitaryModeS:
         self.modes_util = ModesUtil(config_folder)
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'Live Military Mode S'
 
-    def accept(self, modes_address):
+    def accept(self, modes_address: str) -> bool:
         return self.modes_util.is_military(modes_address)
 
-    def sanitize_known_issues(self, aircraft):
+    def sanitize_known_issues(self, aircraft: Optional[Aircraft]) -> None:
 
         if aircraft:
 
@@ -62,7 +64,7 @@ class MilitaryModeS:
                 aircraft.operator = None
 
 
-    def query_aircraft(self, mode_s_hex):
+    def query_aircraft(self, mode_s_hex: str) -> Optional[Aircraft]:
         """ queries aircraft data """
 
         try:

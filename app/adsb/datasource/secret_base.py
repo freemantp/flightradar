@@ -2,13 +2,15 @@ import logging
 import requests
 from requests.exceptions import HTTPError
 from bs4 import BeautifulSoup
+from typing import Optional, Dict, List
 
 from ..aircraft import Aircraft
 from ..util.modes_util import ModesUtil
+from .aircraft_metadata_source import AircraftMetadataSource
 
 logger = logging.getLogger('SecretBasesUk')
 
-class SecretBasesUk:
+class SecretBasesUk(AircraftMetadataSource):
 
     MODE_S_FIELD = 'Mode S transponder'
     ICAO_TYPE_FIELD = 'ICAO code'
@@ -17,7 +19,7 @@ class SecretBasesUk:
 
     """ Secret Bases UK """
 
-    def __init__(self, config_folder):
+    def __init__(self, config_folder: str) -> None:
 
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
@@ -30,20 +32,19 @@ class SecretBasesUk:
         self.modes_util = ModesUtil(config_folder)
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'Secret Bases UK'
 
-    def accept(self, modes_address):
+    def accept(self, modes_address: str) -> bool:
         return self.modes_util.is_military(modes_address)
 
-    def is_sane_field(self, field_content):
+    def is_sane_field(self, field_content: str) -> bool:
         return 'Transponder Logs' not in field_content
 
-    def query_aircraft(self, mode_s_hex):
+    def query_aircraft(self, mode_s_hex: str) -> Optional[Aircraft]:
         """ queries aircraft data """
 
         try:
-
             url = 'https://www.secret-bases.co.uk/aircraft/{:s}'.format(mode_s_hex)
             response = requests.get(url, headers=self.headers, timeout=self.timeout)            
             response.raise_for_status()

@@ -7,8 +7,8 @@ from ..aircraft import Aircraft
 
 logger = logging.getLogger(__name__)
 
-class BaseStationMongoDB:
-    """ MongoDB implementation of BaseStationDB """
+class AircraftRepository:
+    """ MongoDB implementation of Aircraft Repository """
 
     def __init__(self, mongodb: Database):
         self.db = mongodb
@@ -24,8 +24,6 @@ class BaseStationMongoDB:
         result = self.db[self.collection_name].find_one({"modeS": icao24addr.strip().upper()})
         
         if result:
-            # Extract the key fields needed for the Aircraft object
-            # Aircraft class constructor only needs these fields
             return Aircraft(
                 result["modeS"],
                 result.get("registration"),
@@ -105,7 +103,6 @@ class BaseStationMongoDB:
                 return result.acknowledged
                 
             except DuplicateKeyError:
-                # Aircraft with this modeS already exists, try updating it
                 return self.update_aircraft(acrft)
             except PyMongoError as e:
                 logger.exception(e)

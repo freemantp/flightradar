@@ -1,6 +1,6 @@
 import logging
 import threading
-from typing import Any, Dict, Callable
+from typing import Any, Dict, Callable, Set, Optional
 
 from .datasource.radar_service_factory import RadarServiceFactory
 from .flight_manager.flight_manager import FlightManager
@@ -24,6 +24,7 @@ class FlightUpdaterCoordinator:
         self.sleep_time = 1
         self._t = None
         self.interrupted = False
+        self._last_live_icao24s: Optional[Set[str]] = None
         
     def initialize(self, config):
         """Initialize all components with configuration"""
@@ -100,7 +101,10 @@ class FlightUpdaterCoordinator:
             self._performance_monitor.stop_timer('service')
                 
             if not positions:
+                self._last_live_icao24s = set()
                 return
+            
+            self._last_live_icao24s = {pos.icao24 for pos in positions if pos.icao24}
             
             try:
                 filtered_pos = self._flight_manager.filter_military_only(positions)
@@ -146,3 +150,7 @@ class FlightUpdaterCoordinator:
         finally:
             self.is_updating = False
             FlightUpdaterCoordinator._update_lock.release()
+
+    def get_live_icao24s(self) -> Optional[Set[str]]:
+        """Get the latest live ICAO24 addresses from the last radar update"""
+        return self._last_live_icao24s

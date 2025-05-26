@@ -1,16 +1,18 @@
 import requests
 from requests.exceptions import HTTPError
 import logging
+from typing import Optional
 from ..aircraft import Aircraft
+from .aircraft_metadata_source import AircraftMetadataSource
 
 logger = logging.getLogger('OpenSky')
 
 
-class OpenskyNet:
+class OpenskyNet(AircraftMetadataSource):
 
     """ Opensky-Network """
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
@@ -22,13 +24,13 @@ class OpenskyNet:
         self.maxretires = 5
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'Opensky'
 
-    def accept(self, modes_address):
+    def accept(self, modes_address: str) -> bool:
         return True
 
-    def query_aircraft(self, mode_s_hex):
+    def query_aircraft(self, mode_s_hex: str) -> Optional[Aircraft]:
         """ queries aircraft data """
 
         try:

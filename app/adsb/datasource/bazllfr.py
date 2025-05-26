@@ -3,17 +3,19 @@ import logging
 import ssl
 import requests
 from requests.exceptions import HTTPError
+from typing import Optional, Dict, Any
 
 from ..aircraft import Aircraft
 from ..util.modes_util import ModesUtil
+from .aircraft_metadata_source import AircraftMetadataSource
 
 logger = logging.getLogger('BAZL-LFR')
 
-class BazlLFR:
+class BazlLFR(AircraftMetadataSource):
 
     ''' Bazl LFR Queries '''
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.known_replacements = dict()
 
@@ -37,13 +39,13 @@ class BazlLFR:
         self.maxretires = 5
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'BAZL LFR'
 
-    def accept(self, modes_address):
+    def accept(self, modes_address: str) -> bool:
         return ModesUtil.is_swiss(modes_address)
 
-    def query_aircraft(self, mode_s_hex):
+    def query_aircraft(self, mode_s_hex: str) -> Optional[Aircraft]:
         ''' queries aircraft data '''
 
         try:

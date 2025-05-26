@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Request
 from typing import Dict, Any
 
 from . import router
-from .. import get_basestation_db
+from .. import get_aircraft_repository
 from .mappers import toAircraftDto
 from .apimodels import AircraftDto
 
@@ -11,9 +11,9 @@ from .apimodels import AircraftDto
 def get_aircraft(
     icao24addr: str,
     request: Request,
-    basestation_db = Depends(get_basestation_db)
+    aircraft_repo = Depends(get_aircraft_repository)
 ):
-    aircraft = basestation_db.query_aircraft(icao24addr)
+    aircraft = aircraft_repo.query_aircraft(icao24addr)
 
     if aircraft:
         return toAircraftDto(aircraft)

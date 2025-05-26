@@ -2,16 +2,18 @@ import requests
 from requests.exceptions import HTTPError
 import time
 import logging
+from typing import Optional
 
 from ..aircraft import Aircraft
+from .aircraft_metadata_source import AircraftMetadataSource
 
 logger = logging.getLogger('FR24')
 
-class Flightradar24:
+class Flightradar24(AircraftMetadataSource):
 
     """ Flightradar24 Queries """
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self.headers = {
             'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0',
@@ -24,14 +26,14 @@ class Flightradar24:
         self.failcounter = 0
 
     @staticmethod
-    def name():
+    def name() -> str:
         return 'FR24'
 
-    def accept(self, modes_address):
+    def accept(self, modes_address: str) -> bool:
         return True
 
     @staticmethod
-    def _get_timeout_sec(retry_attempt):
+    def _get_timeout_sec(retry_attempt: int) -> int:
 
         """ Seconds in function of retry attempt, basically a Fibonacci seq with offset"""
         n = 6 + retry_attempt
@@ -42,13 +44,13 @@ class Flightradar24:
 
         return a
 
-    def _fail_and_sleep(self):
+    def _fail_and_sleep(self) -> None:
         seconds = Flightradar24._get_timeout_sec(self.failcounter)
         logger.warn('Sleeping for {:d}sec'.format(seconds))
         time.sleep(seconds)
         self.failcounter += 1
 
-    def query_aircraft(self, mode_s_hex):
+    def query_aircraft(self, mode_s_hex: str) -> Optional[Aircraft]:
 
         """ queries aircraft data """
 
