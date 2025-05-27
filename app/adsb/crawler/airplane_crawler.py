@@ -1,9 +1,12 @@
+from app.adsb.datasource.flightradar24 import Flightradar24
+from app.adsb.datasource.openskynet import OpenskyNet
 from ..datasource.hexdb_io import HexdbIo
 from ..datasource.aircraft_metadata_source import AircraftMetadataSource
 from .util.source_backoff import SourceBackoff
 from .util.crawler_exceptions import RetryableSourceException, NonRetryableSourceException
 from .util.aircraft_cache import AircraftCache
 from .util.crawl_item import CrawlItem
+from .shared_aircraft_queue import shared_aircraft_queue
 from ..aircraft import Aircraft
 from ..db.aircraft_repository import AircraftRepository
 from ..util.logging import init_logging
@@ -11,6 +14,7 @@ from ...config import app_state
 
 import logging
 from collections import deque
+from datetime import datetime, timedelta
 from typing import List, Optional, Set, Deque, Dict
 from requests.exceptions import HTTPError
 import requests
@@ -29,10 +33,10 @@ class AirplaneCrawler:
 
         self.sources: List[AircraftMetadataSource] = [
             HexdbIo(),
-            # BazlLFR(),
-            # OpenskyNet(),
+            OpenskyNet(),
+            Flightradar24(),
+            # BazlLFR(), 
             # SecretBasesUk(config.DATA_FOLDER),
-            # Flightradar24(),
             # MilitaryModeS(config.DATA_FOLDER)
         ]
         
@@ -45,6 +49,25 @@ class AirplaneCrawler:
         }
         
         self._processed_aircraft = AircraftCache(max_size=1000)
+
+    def _is_aircraft_fresh(self, icao24: str) -> bool:
+        """Check if aircraft metadata is less than 3 months old"""
+        try:
+            result = self.aircraft_repo.db[self.aircraft_repo.collection_name].find_one(
+                {"modeS": icao24.strip().upper()}, 
+                {"lastModified": 1}
+            )
+            
+            if result and "lastModified" in result:
+                last_modified = result["lastModified"]
+                three_months_ago = datetime.now() - timedelta(days=90)
+                return last_modified > three_months_ago
+            
+            return False
+            
+        except Exception as e:
+            logger.warning(f"Error checking aircraft freshness for {icao24}: {e}")
+            return False
 
     def _classify_exception(self, exception: Exception) -> Exception:
         """Classify exceptions to determine if they should trigger backoff"""
@@ -127,10 +150,12 @@ class AirplaneCrawler:
                 
             existing_aircraft = self.aircraft_repo.query_aircraft(item.icao24)
             
-            if existing_aircraft is not None:
-                logger.debug(f"Aircraft {item.icao24} already exists in database")
+            if existing_aircraft is not None and self._is_aircraft_fresh(item.icao24):
+                logger.debug(f"Aircraft {item.icao24} already exists and is fresh")
                 self._processed_aircraft.add(item.icao24)
                 return True
+            elif existing_aircraft is not None:
+                logger.debug(f"Aircraft {item.icao24} exists but is stale (>3 months), refreshing")
                 
             available_sources = [s for s in self.sources if s.accept(item.icao24) and self._can_query_source(s)]
             
@@ -143,13 +168,34 @@ class AirplaneCrawler:
             if aircraft_metadata:
                 if self.aircraft_repo.insert_aircraft(aircraft_metadata):
                     self._processed_aircraft.add(item.icao24)
-                    logger.info(f"Successfully inserted aircraft: {item.icao24}")
+                    if existing_aircraft is not None:
+                        logger.info(f"Successfully updated stale aircraft: {item.icao24}")
+                    else:
+                        logger.info(f"Successfully inserted new aircraft: {item.icao24}")
                     return True
                 else:
-                    logger.warning(f"Failed to insert aircraft to database: {item.icao24}")
+                    logger.warning(f"Failed to insert/update aircraft in database: {item.icao24}")
                     return False
             else:
-                logger.debug(f"No metadata found for aircraft: {item.icao24}")
+                sources_tried = [s.name() for s in available_sources]
+                logger.warning(f"Metadata query failed for aircraft {item.icao24}. Sources tried: {', '.join(sources_tried)}")
+                
+                # Store as unknown aircraft in MongoDB
+                try:
+                    self.aircraft_repo.db["UnknownAircraft"].find_one_and_update(
+                        {"modeS": item.icao24.upper()},
+                        {
+                            "$set": {"last_seen": datetime.now()},
+                            "$inc": {"query_attempts": 1},
+                            "$addToSet": {"sources_queried": {"$each": sources_tried}},
+                            "$setOnInsert": {"first_seen": datetime.now()}
+                        },
+                        upsert=True
+                    )
+                    logger.info(f"Updated unknown aircraft record: {item.icao24}")
+                except Exception as e:
+                    logger.warning(f"Failed to store unknown aircraft {item.icao24}: {e}")
+                
                 self._processed_aircraft.add(item.icao24)
                 return True
                 
@@ -165,13 +211,13 @@ class AirplaneCrawler:
             logger.debug(f"Added {icao24} to crawl queue")
 
     def _process_queue(self) -> None:
-        """Process items in the crawl queue"""
+        """Process items in the crawl queue (max 100 items per run)"""
         processed_count = 0
-        max_items_per_cycle = 100
+        max_items_per_run = 100
         
         retry_items = []
         
-        while self._crawl_queue and processed_count < max_items_per_cycle:
+        while self._crawl_queue and processed_count < max_items_per_run:
             item = self._crawl_queue.popleft()
             
             success = self._process_crawl_item(item)
@@ -184,28 +230,40 @@ class AirplaneCrawler:
         for item in retry_items:
             self._crawl_queue.append(item)
 
-    def crawl_sources(self, live_icao24s: Optional[Set[str]] = None) -> None:
-        """Crawl sources for new aircraft metadata using queue-based processing with per-source backoff"""
+    def crawl_sources(self) -> None:
+        """Crawl sources for new aircraft metadata using shared queue and LRU cache filtering"""
         
         try:
-            if live_icao24s is None:
-                logger.debug("No live aircraft data provided, processing existing queue")
+            new_aircraft = shared_aircraft_queue.get_aircraft(max_items=100)
+            
+            if not new_aircraft:
+                logger.debug("No new aircraft in shared queue, processing existing local queue")
                 self._process_queue()
                 return
             
-            logger.debug(f"Detected {len(live_icao24s)} unique live aircraft")
+            logger.debug(f"Retrieved {len(new_aircraft)} aircraft from shared queue")
             
+            # Filter out aircraft that are already in our processed cache
+            filtered_aircraft = {
+                icao24 for icao24 in new_aircraft 
+                if not self._processed_aircraft.contains(icao24)
+            }
+            
+            logger.debug(f"After cache filtering: {len(filtered_aircraft)} aircraft to process")
+            
+            # Add filtered aircraft to our local processing queue
             new_aircraft_count = 0
-            for icao24 in live_icao24s:
+            for icao24 in filtered_aircraft:
                 if icao24 not in self._known_aircraft:
                     self._add_to_queue(icao24)
                     new_aircraft_count += 1
                     
             if new_aircraft_count > 0:
-                logger.info(f"Added {new_aircraft_count} new aircraft to crawl queue")
+                logger.info(f"Added {new_aircraft_count} new aircraft to processing queue")
                 
-            logger.debug(f"Queue size: {len(self._crawl_queue)} items")
+            logger.debug(f"Local queue size: {len(self._crawl_queue)} items")
             logger.debug(f"Processed aircraft cache size: {self._processed_aircraft.size()}")
+            logger.debug(f"Shared queue size: {shared_aircraft_queue.size()} items")
             
             backed_off_sources = [name for name, backoff in self._source_backoffs.items() if backoff.retry_count > 0]
             if backed_off_sources:

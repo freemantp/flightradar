@@ -99,7 +99,7 @@ class BazlLFR(AircraftMetadataSource):
                 type2 = '{:s} {:s}'.format(manufacturer, model)
                 type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
 
-                return Aircraft(mode_s_hex, reg, type1, type2, operator)
+                return Aircraft(mode_s_hex, reg, type1, type2, operator, source=self.name())
                 
         except HTTPError as http_err:
             logger.exception(http_err)

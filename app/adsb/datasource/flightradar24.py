@@ -74,7 +74,7 @@ class Flightradar24(AircraftMetadataSource):
                             operator = aircraft['airline']['name']
                         else:
                             operator = None
-                        return Aircraft(mode_s_hex, reg, type1, type2, operator)
+                        return Aircraft(mode_s_hex, reg, type1, type2, operator, source=self.name())
 
                 elif response.status_code == requests.codes.payment:                    
                     logger.warn('HTTP 402 - Payment Required')

@@ -29,7 +29,8 @@ class AircraftRepository:
                 result.get("registration"),
                 result.get("icaoTypeCode"),
                 result.get("type"),
-                result.get("registeredOwners")
+                result.get("registeredOwners"),
+                result.get("source")
             )
         else:
             return None
@@ -47,6 +48,7 @@ class AircraftRepository:
                     "icaoTypeCode": aircraft.type1,
                     "type": aircraft.type2,
                     "registeredOwners": aircraft.operator,
+                    "source": aircraft.source,
                     "lastModified": datetime.now()
                 }
             elif aircraft.is_complete():
@@ -54,11 +56,13 @@ class AircraftRepository:
                     "registration": aircraft.reg,
                     "icaoTypeCode": aircraft.type1,
                     "type": aircraft.type2,
+                    "source": aircraft.source,
                     "lastModified": datetime.now()
                 }
             elif aircraft.reg:
                 update_dict = {
                     "registration": aircraft.reg,
+                    "source": aircraft.source,
                     "lastModified": datetime.now()
                 }
             
@@ -90,13 +94,9 @@ class AircraftRepository:
                     "icaoTypeCode": acrft.type1,
                     "type": acrft.type2,
                     "registeredOwners": acrft.operator,
-                    # Initialize the new fields with empty values
-                    "modesCountry": "",
+                    "source": acrft.source,
                     "country": "",
-                    "manufacturer": "",
-                    "serialNo": "",
-                    "engines": "",
-                    "icaoDescription": ""
+                    "manufacturer": ""
                 }
                 
                 result = self.db[self.collection_name].insert_one(aircraft_doc)

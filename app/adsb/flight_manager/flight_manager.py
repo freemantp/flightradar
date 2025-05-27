@@ -107,13 +107,13 @@ class FlightManager:
             inserted_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in all_inserted[:5]])
             if len(all_inserted) > 5:
                 inserted_msg += f" and {len(all_inserted) - 5} more"
-            logger.info(f'aircraftEvent=insert {inserted_msg}')
+            logger.info(f'addFlights: {inserted_msg}')
 
         if all_updated:
             updated_msg = ', '.join(['{} (cs={})'.format(f[0], f[1]) for f in all_updated[:5]])
             if len(all_updated) > 5:
                 updated_msg += f" and {len(all_updated) - 5} more"
-            logger.info(f'aircraftEvent=update {updated_msg}')
+            logger.info(f'updateFlights: {updated_msg}')
             
         return all_inserted, all_updated
     

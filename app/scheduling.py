@@ -91,9 +91,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
         # Keep crawler at 30-second interval but increase grace time
         scheduler.add_job(
             id='airplane_crawler',
-            func=lambda: app.state.crawler.crawl_sources(
-                app.state.updater.get_live_icao24s() if hasattr(app.state, 'updater') else None
-            ),
+            func=lambda: app.state.crawler.crawl_sources(),
             trigger='interval',
             seconds=30,
             misfire_grace_time=120,  # Increased from 90 for better reliability

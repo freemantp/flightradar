@@ -66,7 +66,7 @@ class HexdbIo(AircraftMetadataSource):
 
                 # Only return aircraft if we have at least registration or type info
                 if reg or type1 or type2:
-                    return Aircraft(mode_s, reg, type1, type2, operator)
+                    return Aircraft(mode_s, reg, type1, type2, operator, source=self.name())
 
         except HTTPError as http_err:
             if http_err.response.status_code == requests.codes.too_many:

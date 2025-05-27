@@ -51,7 +51,7 @@ class SecretBasesUk(AircraftMetadataSource):
 
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            aircraft = Aircraft(mode_s_hex)
+            aircraft = Aircraft(mode_s_hex, source=self.name())
             raw_line =  str(soup.body.h1).replace('</h1>', '', 1).replace('<h1>', '', 1)
 
             named_fields = dict()

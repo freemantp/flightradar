@@ -56,7 +56,7 @@ class OpenskyNet(AircraftMetadataSource):
                             else  '{:s} {:s}'.format(aircraft['manufacturerName'], aircraft['model']) )
 
                 if modeS and reg and type1 and aircraft['model']:
-                    return Aircraft(modeS, reg, type1, type2, op)
+                    return Aircraft(modeS, reg, type1, type2, op, source=self.name())
 
         except HTTPError as http_err:
             logger.exception(http_err)

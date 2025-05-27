@@ -11,6 +11,7 @@ from .notification.websocket_notifier import WebSocketNotifier
 from .performance_monitor import PerformanceMonitor
 from .db.database_factory import DatabaseFactory
 from .model.position_report import PositionReport
+from .crawler.shared_aircraft_queue import shared_aircraft_queue
 from ..config import app_state
 from app.exceptions import DatabaseException
 
@@ -24,7 +25,6 @@ class FlightUpdaterCoordinator:
         self.sleep_time = 1
         self._t = None
         self.interrupted = False
-        self._last_live_icao24s: Optional[Set[str]] = None
         
     def initialize(self, config):
         """Initialize all components with configuration"""
@@ -101,10 +101,11 @@ class FlightUpdaterCoordinator:
             self._performance_monitor.stop_timer('service')
                 
             if not positions:
-                self._last_live_icao24s = set()
                 return
             
-            self._last_live_icao24s = {pos.icao24 for pos in positions if pos.icao24}
+            # Push new aircraft to shared queue for crawler
+            live_icao24s = {pos.icao24 for pos in positions if pos.icao24}
+            shared_aircraft_queue.add_aircraft(live_icao24s)
             
             try:
                 filtered_pos = self._flight_manager.filter_military_only(positions)
@@ -151,6 +152,3 @@ class FlightUpdaterCoordinator:
             self.is_updating = False
             FlightUpdaterCoordinator._update_lock.release()
 
-    def get_live_icao24s(self) -> Optional[Set[str]]:
-        """Get the latest live ICAO24 addresses from the last radar update"""
-        return self._last_live_icao24s

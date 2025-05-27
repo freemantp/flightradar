@@ -3,7 +3,7 @@
 class Aircraft:
     """ Aircraft data """
 
-    def __init__(self, modeShex, reg=None, type1=None, type2=None, operator=None):
+    def __init__(self, modeShex, reg=None, type1=None, type2=None, operator=None, source=None):
 
         if not modeShex:
             raise ValueError("Empty hex code not allowed")
@@ -13,6 +13,7 @@ class Aircraft:
         self.type1 = type1.strip() if type1 else None
         self.type2 = type2.strip() if type2 else None
         self.operator = operator.strip() if operator else None
+        self.source = source.strip() if source else None
 
     def merge(self, other_aircraft):
 
@@ -30,6 +31,9 @@ class Aircraft:
                 changes = True
             if not self.operator and other_aircraft.operator:
                 self.operator = other_aircraft.operator
+                changes = True
+            if not self.source and other_aircraft.source:
+                self.source = other_aircraft.source
                 changes = True
             return changes
         else:

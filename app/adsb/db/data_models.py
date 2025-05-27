@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -30,6 +30,23 @@ class Flight(BaseModel):
 
     def __str__(self):
         return f'Flight modeS={self.modeS}, callsign={self.callsign} [{"mil" if self.is_military else "civ"}], archived={self.archived}, last_contact={self.last_contact}'
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
+
+
+class UnknownAircraft(BaseModel):
+    modeS: str
+    first_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    query_attempts: int = 0
+    sources_queried: List[str] = Field(default_factory=list)
+    expire_at: Optional[datetime] = None
+
+    def __str__(self):
+        return f'UnknownAircraft modeS={self.modeS}, attempts={self.query_attempts}, last_seen={self.last_seen}'
 
     class Config:
         json_encoders = {

@@ -75,7 +75,7 @@ class MilitaryModeS(AircraftMetadataSource):
 
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            aircraft = Aircraft(mode_s_hex)
+            aircraft = Aircraft(mode_s_hex, source=self.name())
 
             index = 0
             for td in soup.table.find_all('td', width='40%'):

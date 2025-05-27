@@ -6,7 +6,7 @@ from itertools import zip_longest
 from bson.objectid import ObjectId
 from functools import wraps
 
-from .data_models import Flight
+from .data_models import Flight, UnknownAircraft
 
 
 def handle_mongodb_errors(func):
@@ -30,13 +30,16 @@ class MongoDBRepository:
         # Use collection names from db object if available, otherwise use defaults
         flights_collection_name = getattr(db, 'flights_collection', 'flights')
         positions_collection_name = getattr(db, 'positions_collection', 'positions')
+        unknown_aircraft_collection_name = 'UnknownAircraft'
 
         self.flights_collection = db[flights_collection_name]
         self.positions_collection = db[positions_collection_name]
+        self.unknown_aircraft_collection = db[unknown_aircraft_collection_name]
 
         # Store collection names for aggregation pipelines
         self.flights_collection_name = flights_collection_name
         self.positions_collection_name = positions_collection_name
+        self.unknown_aircraft_collection_name = unknown_aircraft_collection_name
 
         # Create indexes for better performance
         self._ensure_indexes()
@@ -86,6 +89,9 @@ class MongoDBRepository:
 
         # Positions collection indexes
         self.positions_collection.create_index([("flight_id", 1), ("timestmp", 1)])
+        
+        self.unknown_aircraft_collection.create_index("modeS", unique=True)
+        self.unknown_aircraft_collection.create_index("last_seen")
 
     def get_flights(self, modeS_addr: str) -> List[Dict[str, Any]]:
         """Get flights by ICAO Mode-S address"""
@@ -392,6 +398,76 @@ class MongoDBRepository:
         )
         
         return result
+
+    @handle_mongodb_errors
+    def insert_unknown_aircraft(self, unknown_aircraft: UnknownAircraft) -> str:
+        """Insert a new unknown aircraft record"""
+        aircraft_dict = unknown_aircraft.model_dump()
+        result = self.unknown_aircraft_collection.insert_one(aircraft_dict)
+        return str(result.inserted_id)
+
+    @handle_mongodb_errors
+    def get_or_create_unknown_aircraft(self, modeS: str, sources_queried: List[str] = None, expire_at: Optional[datetime] = None) -> Dict[str, Any]:
+        """Get existing unknown aircraft or create a new record"""
+        if sources_queried is None:
+            sources_queried = []
+            
+        now = datetime.now(timezone.utc)
+        
+        update_doc = {
+            "$set": {
+                "last_seen": now
+            },
+            "$inc": {
+                "query_attempts": 1
+            }
+        }
+        
+        if sources_queried:
+            update_doc["$addToSet"] = {"sources_queried": {"$each": sources_queried}}
+            
+        if expire_at:
+            update_doc["$set"]["expire_at"] = expire_at
+        
+        result = self.unknown_aircraft_collection.find_one_and_update(
+            {"modeS": modeS},
+            update_doc,
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+            projection={"_id": 1, "modeS": 1, "query_attempts": 1, "last_seen": 1, "sources_queried": 1}
+        )
+        
+        if result and result.get("query_attempts") == 1:
+            set_on_insert = {
+                "first_seen": now,
+                "sources_queried": sources_queried
+            }
+            if expire_at:
+                set_on_insert["expire_at"] = expire_at
+                
+            self.unknown_aircraft_collection.update_one(
+                {"_id": result["_id"]},
+                {"$setOnInsert": set_on_insert}
+            )
+            
+        return result
+
+    def get_unknown_aircraft(self, modeS: str) -> Optional[Dict[str, Any]]:
+        """Get unknown aircraft by ICAO Mode-S address"""
+        return self.unknown_aircraft_collection.find_one({"modeS": modeS})
+
+    def get_unknown_aircraft_older_than(self, timestamp: datetime) -> List[Dict[str, Any]]:
+        """Get unknown aircraft with last_seen older than given timestamp"""
+        return list(self.unknown_aircraft_collection.find({
+            "last_seen": {"$lt": timestamp}
+        }))
+
+    @handle_mongodb_errors
+    def delete_unknown_aircraft(self, aircraft_ids: List[str]) -> None:
+        """Delete unknown aircraft records"""
+        if aircraft_ids:
+            object_ids = [ObjectId(id) for id in aircraft_ids]
+            self.unknown_aircraft_collection.delete_many({"_id": {"$in": object_ids}})
 
     @staticmethod
     def _get_chunks(iterable, chunk_size):
