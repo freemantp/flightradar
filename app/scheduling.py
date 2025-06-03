@@ -88,12 +88,12 @@ def configure_scheduling(app: FastAPI, conf: Config):
         crawler = AirplaneCrawler(conf)
         app.state.crawler = crawler
 
-        # Keep crawler at 30-second interval but increase grace time
+        # Keep crawler at 20-second interval but increase grace time
         scheduler.add_job(
             id='airplane_crawler',
             func=lambda: app.state.crawler.crawl_sources(),
             trigger='interval',
-            seconds=30,
+            seconds=20,
             misfire_grace_time=120,  # Increased from 90 for better reliability
             coalesce=True
         )

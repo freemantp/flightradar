@@ -11,7 +11,7 @@ from .notification.websocket_notifier import WebSocketNotifier
 from .performance_monitor import PerformanceMonitor
 from .db.database_factory import DatabaseFactory
 from .model.position_report import PositionReport
-from .crawler.shared_aircraft_queue import shared_aircraft_queue
+from .incomplete_aircraft_manager import IncompleteAircraftManager
 from ..config import app_state
 from app.exceptions import DatabaseException
 
@@ -55,6 +55,8 @@ class FlightUpdaterCoordinator:
         
         self._websocket_notifier = WebSocketNotifier()
         self._performance_monitor = PerformanceMonitor()
+        
+        self._unknown_aircraft_manager = IncompleteAircraftManager(config)
             
         
         # Initialize position manager with data from flight manager
@@ -101,11 +103,9 @@ class FlightUpdaterCoordinator:
             self._performance_monitor.stop_timer('service')
                 
             if not positions:
-                return
-            
-            # Push new aircraft to shared queue for crawler
+                return        
             live_icao24s = {pos.icao24 for pos in positions if pos.icao24}
-            shared_aircraft_queue.add_aircraft(live_icao24s)
+            self._unknown_aircraft_manager.schedule_aircraft_for_processing(live_icao24s)
             
             try:
                 filtered_pos = self._flight_manager.filter_military_only(positions)

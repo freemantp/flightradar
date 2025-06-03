@@ -365,7 +365,7 @@ async def websocket_flight_positions(websocket: WebSocket, flight_id: str):
                 setattr(app.state, callback_key, None)
                 logger.info(f"WebSocket callback for flight {flight_id} unregistered and deactivated")
 
-@router.get('/flights/{flight_id}/positions', response_model=List[List[Union[float, int]]])
+@router.get('/flights/{flight_id}/positions')
 def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
         # Check if flight exists
@@ -376,13 +376,10 @@ def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
         # Get positions
         positions = mongodb.positions.find({"flight_id": ObjectId(flight_id)}).sort("timestmp", 1)
 
-        # Convert to list format suitable for JSON serialization
-        position_list = []
+        # Convert to array of arrays format
         for p in positions:
             alt = p["alt"] if p["alt"] is not None else -1
-            position_list.append([p["lat"], p["lon"], alt])
-
-        return position_list
+            yield [p["lat"], p["lon"], alt]
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid flight id format: {str(e)}")
@@ -391,13 +388,12 @@ def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
 @router.get('/positions')
 def get_all_positions(
     request: Request,
-    archived: bool = Query(False, description="Include archived positions"),
     filter: Optional[str] = Query(None, description="Filter positions (e.g. 'mil' for military only)"),
     mongodb: Database = Depends(get_mongodb)
 ):
     # Use MongoDB aggregation to get all positions grouped by flight
     repo = MongoDBRepository(mongodb)
-    positions = repo.get_all_positions(archived)
+    positions = repo.get_all_positions()
 
     # Filter positions by military if requested
     if filter == 'mil':

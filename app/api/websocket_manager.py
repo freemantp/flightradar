@@ -28,7 +28,7 @@ class ConnectionManager:
         client_info = f"New WebSocket connection established"
         if "x-forwarded-for" in websocket.headers:
             client_info += f" from {websocket.headers['x-forwarded-for']}"
-        logger.info(f"{client_info}. Total active: {len(self.active_connections)}")
+        logger.debug(f"{client_info}. Total active: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         """
@@ -37,7 +37,7 @@ class ConnectionManager:
         with self._lock:
             if websocket in self.active_connections:
                 self.active_connections.remove(websocket)
-        logger.info(f"WebSocket connection closed. Total active: {len(self.active_connections)}")
+        logger.debug(f"WebSocket connection closed. Total active: {len(self.active_connections)}")
 
     async def broadcast_positions(self, positions: Dict[str, Any]):
         """
@@ -82,5 +82,5 @@ class ConnectionManager:
                 for conn in disconnected:
                     if conn in self.active_connections:
                         self.active_connections.remove(conn)
-                logger.info(
+                logger.debug(
                     f"Removed {len(disconnected)} disconnected clients. {len(self.active_connections)} remaining.")

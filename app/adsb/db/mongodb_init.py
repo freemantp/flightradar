@@ -44,7 +44,6 @@ def init_mongodb(connection_string: str, db_name: str, retention_minutes: int):
         flights_coll.create_index("modeS", unique=False)
         flights_coll.create_index("last_contact")
         flights_coll.create_index("is_military")
-        flights_coll.create_index("archived")
         
         # Create TTL index if retention is specified
         if retention_minutes and retention_minutes > 0:

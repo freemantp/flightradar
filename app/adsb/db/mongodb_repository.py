@@ -6,7 +6,7 @@ from itertools import zip_longest
 from bson.objectid import ObjectId
 from functools import wraps
 
-from .data_models import Flight, UnknownAircraft
+from .data_models import Flight, IncompleteAircraft
 
 
 def handle_mongodb_errors(func):
@@ -30,7 +30,7 @@ class MongoDBRepository:
         # Use collection names from db object if available, otherwise use defaults
         flights_collection_name = getattr(db, 'flights_collection', 'flights')
         positions_collection_name = getattr(db, 'positions_collection', 'positions')
-        unknown_aircraft_collection_name = 'UnknownAircraft'
+        unknown_aircraft_collection_name = 'aircraft_to_process'
 
         self.flights_collection = db[flights_collection_name]
         self.positions_collection = db[positions_collection_name]
@@ -81,8 +81,8 @@ class MongoDBRepository:
             # Create a non-unique index if it doesn't exist
             self.flights_collection.create_index("modeS", unique=False)
             
-        # Create index for last_contact and archived flag
-        self.flights_collection.create_index([("archived", 1), ("last_contact", 1)])
+        # Create index for last_contact
+        self.flights_collection.create_index("last_contact")
         
         # Create compound index for modeS + callsign for faster lookups
         self.flights_collection.create_index([("modeS", 1), ("callsign", 1)])
@@ -118,10 +118,9 @@ class MongoDBRepository:
         """Check if flight exists by ID"""
         return self.flights_collection.count_documents({"_id": ObjectId(flight_id)}) > 0
 
-    def get_all_positions(self, is_archived: bool = False) -> Dict[str, List[Tuple[float, float, int]]]:
-        """Get all positions for non-archived or archived flights"""
+    def get_all_positions(self) -> Dict[str, List[Tuple[float, float, int]]]:
+        """Get all positions for flights"""
         pipeline = [
-            {"$match": {"archived": is_archived}},
             {"$lookup": {
                 "from": self.positions_collection_name,
                 "localField": "_id",
@@ -219,11 +218,10 @@ class MongoDBRepository:
         
         return list(self.flights_collection.aggregate(pipeline))
 
-    def get_non_archived_flights_older_than(self, timestamp: datetime) -> List[Dict[str, Any]]:
-        """Get non-archived flights with last contact older than given timestamp"""
+    def get_flights_older_than(self, timestamp: datetime) -> List[Dict[str, Any]]:
+        """Get flights with last contact older than given timestamp"""
         return list(self.flights_collection.find({
-            "last_contact": {"$lt": timestamp},
-            "archived": False
+            "last_contact": {"$lt": timestamp}
         }))
 
     def delete_flights_and_positions(self, flight_ids: List[str]):
@@ -329,7 +327,6 @@ class MongoDBRepository:
                 "modeS": modeS,
                 "last_contact": now,
                 "is_military": is_military,
-                "archived": False,
                 "first_contact": now
             }
             
@@ -369,7 +366,6 @@ class MongoDBRepository:
                 {"$set": set_fields,
                  "$setOnInsert": {
                     "is_military": is_military,
-                    "archived": False,
                     "first_contact": now
                 }},
                 upsert=True,
@@ -400,9 +396,9 @@ class MongoDBRepository:
         return result
 
     @handle_mongodb_errors
-    def insert_unknown_aircraft(self, unknown_aircraft: UnknownAircraft) -> str:
+    def insert_unknown_aircraft(self, aircraft_to_process: IncompleteAircraft) -> str:
         """Insert a new unknown aircraft record"""
-        aircraft_dict = unknown_aircraft.model_dump()
+        aircraft_dict = aircraft_to_process.model_dump()
         result = self.unknown_aircraft_collection.insert_one(aircraft_dict)
         return str(result.inserted_id)
 
