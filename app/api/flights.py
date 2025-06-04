@@ -64,7 +64,28 @@ def ready(request: Request):
         raise HTTPException(status_code=500, detail="Service not ready")
 
 
-@router.get('/flights', response_model=List[FlightDto])
+@router.get('/flights', response_model=List[FlightDto], 
+    summary="Get all flights",
+    description="Returns a list of tracked flights. icao24 is the ICAO 24-bit hex address, cls is the callsign, lstCntct is the time of last contact, firstCntct is the time of first contact",
+    responses={
+        200: {
+            "description": "List of flights",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "id": "683f570bd570101935e7ff63",
+                            "icao24": "394a03",
+                            "cls": "AFR990",
+                            "lstCntct": "2025-06-03T20:12:03.615000Z",
+                            "firstCntct": "2025-06-03T20:11:55.542000Z"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+)
 def get_flights(
     request: Request,
     filter: Optional[str] = Query(None, description="Filter flights (e.g. 'mil' for military only)"),
@@ -96,7 +117,27 @@ def get_flights(
         raise HTTPException(status_code=400, detail=f"Invalid arguments: {str(e)}")
 
 
-@router.get('/flights/{flight_id}', response_model=FlightDto)
+@router.get('/flights/{flight_id}', response_model=FlightDto,
+    summary="Get flight by ID",
+    description="Returns a specific flight by its ID. icao24 is the ICAO 24-bit hex address, cls is the callsign, lstCntct is the time of last contact, firstCntct is the time of first contact",
+    responses={
+        200: {
+            "description": "Flight details",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "683f570bd570101935e7ff63",
+                        "icao24": "394a03",
+                        "cls": "AFR990",
+                        "lstCntct": "2025-06-03T20:14:19.571000Z",
+                        "firstCntct": "2025-06-03T20:11:55.542000Z"
+                    }
+                }
+            }
+        },
+        404: {"description": "Flight not found"}
+    }
+)
 def get_flight(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
         flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
@@ -365,47 +406,84 @@ async def websocket_flight_positions(websocket: WebSocket, flight_id: str):
                 setattr(app.state, callback_key, None)
                 logger.info(f"WebSocket callback for flight {flight_id} unregistered and deactivated")
 
-@router.get('/flights/{flight_id}/positions')
+@router.get('/flights/{flight_id}/positions',
+    summary="Get flight positions",
+    description="Returns an array of position coordinates [lat, lon, alt] for a specific flight",
+    responses={
+        200: {
+            "description": "Array of position coordinates",
+            "content": {
+                "application/json": {
+                    "example": [
+                        [47.520152, 7.920509, 32025],
+                        [47.655716, 11.048882, 28475]
+                    ]
+                }
+            }
+        },
+        404: {"description": "Flight not found"}
+    }
+)
 def get_positions(flight_id: str, mongodb: Database = Depends(get_mongodb)):
     try:
-        # Check if flight exists
         flight = mongodb.flights.find_one({"_id": ObjectId(flight_id)})
         if not flight:
             raise HTTPException(status_code=404, detail="Flight not found")
 
-        # Get positions
-        positions = mongodb.positions.find({"flight_id": ObjectId(flight_id)}).sort("timestmp", 1)
+        positions = list(mongodb.positions.find(
+            {"flight_id": ObjectId(flight_id)},
+            {"lat": 1, "lon": 1, "alt": 1, "_id": 0}  # Only fetch needed fields
+        ).sort("timestmp", 1).limit(10000))  # Limit to prevent memory issues
 
         # Convert to array of arrays format
+        result = []
         for p in positions:
             alt = p["alt"] if p["alt"] is not None else -1
-            yield [p["lat"], p["lon"], alt]
+            result.append([p["lat"], p["lon"], alt])
+
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid flight id format: {str(e)}")
 
 
-@router.get('/positions')
+@router.get('/positions',
+    summary="Get all positions",
+    description="Returns a map with ICAO24 hex address as key and arrays of [lat, lon, alt] coordinates as values",
+    responses={
+        200: {
+            "description": "Map of ICAO24 addresses to position arrays",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "300781": [
+                            [47.669632, 11.054512, 28200],
+                            [47.655716, 11.048882, 28475]
+                        ]
+                    }
+                }
+            }
+        }
+    }
+)
 def get_all_positions(
     request: Request,
-    filter: Optional[str] = Query(None, description="Filter positions (e.g. 'mil' for military only)"),
-    mongodb: Database = Depends(get_mongodb)
+    filter: Optional[str] = Query(None, description="Filter positions (e.g. 'mil' for military only)")
 ):
-    # Use MongoDB aggregation to get all positions grouped by flight
-    repo = MongoDBRepository(mongodb)
-    positions = repo.get_all_positions()
-
-    # Filter positions by military if requested
-    if filter == 'mil':
-        positions = {key: value for (key, value) in positions.items() if request.app.state.modes_util.is_military(key)}
-
-    # Clean up any None values to prevent validation errors
-    cleaned_positions = {}
-    for key, value_list in positions.items():
-        cleaned_positions[key] = [
-            [lat, lon, alt if alt is not None else 0]
-            for lat, lon, alt in value_list
-            if lat is not None and lon is not None
-        ]
-
-    return cleaned_positions
+    cached_flights = request.app.state.updater.get_cached_flights()
+    
+    positions = {}
+    
+    for icao24, flight_data in cached_flights.items():
+        if filter == 'mil' and not request.app.state.modes_util.is_military(icao24):
+            continue
+            
+        # Convert flight data to position array format
+        if hasattr(flight_data, 'lat') and hasattr(flight_data, 'lon'):
+            alt = getattr(flight_data, 'alt', -1)
+            if alt is None:
+                alt = -1
+                
+            positions[icao24] = [[flight_data.lat, flight_data.lon, alt]]
+    
+    return positions
