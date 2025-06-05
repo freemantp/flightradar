@@ -1,6 +1,6 @@
-from .apimodels import FlightDto, AircraftDto, to_datestring
+from .models import FlightDto, AircraftDto, to_datestring
 from typing import Dict, Any
-from ..adsb.aircraft import Aircraft
+from ..core.models.aircraft import Aircraft
 
 
 def toFlightDto(flight: Dict[str, Any]) -> FlightDto:

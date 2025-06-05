@@ -2,6 +2,6 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-from . import flights
-from . import aircraft
+from .endpoints import flights
+from .endpoints import aircraft
 

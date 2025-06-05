@@ -12,7 +12,7 @@ cli = typer.Typer()
 def initschema():
     """Initialize MongoDB schema."""
 
-    from app.adsb.db import init_mongodb
+    from app.data import init_mongodb
     from app.config import Config
 
     conf = Config()

@@ -1,33 +1,14 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from os import path
-from contextvars import ContextVar
 
 from .config import Config, app_state
 from .meta import MetaInformation
-from .adsb.db.aircraft_repository import AircraftRepository
-from .adsb.db import init_mongodb
-from .adsb.util.logging import init_logging
+from .data import init_mongodb
+from .core.utils.logging import init_logging
 
 from .scheduling import configure_scheduling
 
-# Context variables to store request-scoped objects
-aircraft_repo_var = ContextVar("aircraft_repo", default=None)
-
-
-def get_aircraft_repository(request: Request):
-    aircraft_repo = aircraft_repo_var.get()
-    if aircraft_repo is None:
-        aircraft_repo = AircraftRepository(
-            request.app.state.mongodb
-        )
-        aircraft_repo_var.set(aircraft_repo)
-    return aircraft_repo
-
-
-def get_mongodb(request: Request):
-    yield request.app.state.mongodb
 
 
 def create_app():
@@ -54,7 +35,7 @@ def create_app():
     app.state.config = conf
     app.state.metaInfo = MetaInformation()
 
-    from .adsb.util.modes_util import ModesUtil
+    from .core.utils.modes_util import ModesUtil
     app.state.modes_util = ModesUtil(conf.DATA_FOLDER)
 
     # Add middleware

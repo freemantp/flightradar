@@ -1,6 +1,4 @@
 import json
-import os
-import logging
 from pathlib import Path
 
 class MetaInformation:

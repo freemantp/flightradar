@@ -1,27 +1,26 @@
 import logging
-import time
 from fastapi import FastAPI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.events import *
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 from .config import Config
-from .adsb.flight_updater_coordinator import FlightUpdaterCoordinator
-from .adsb.crawler.airplane_crawler import AirplaneCrawler
+from .core.services.flight_updater_coordinator import FlightUpdaterCoordinator
+from .crawling.crawler import AirplaneCrawler
 
 logger = logging.getLogger(__name__)
 
 UPDATER_JOB_NAME = 'flight_updater_job'
 
-def create_updater(config):
+def create_updater(config, mongodb=None):
     updater = FlightUpdaterCoordinator()
-    updater.initialize(config)
+    updater.initialize(config, mongodb)
     return updater
 
 def ensure_db_indexes(app):
     """Make sure database indexes are correctly configured"""
     if hasattr(app.state, 'mongodb') and app.state.mongodb is not None:
-        from .adsb.db.mongodb_repository import MongoDBRepository
+        from .data.repositories.mongodb_repository import MongoDBRepository
         # Create a temporary repository to ensure indexes
         repo = MongoDBRepository(app.state.mongodb)
         # Force index check/creation
@@ -57,8 +56,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
     # Store scheduler in app state
     app.state.apscheduler = scheduler
     
-    # Create updater
-    updater = create_updater(conf)
+    updater = create_updater(conf, app.state.mongodb)
     app.state.updater = updater
 
     # Reduce logging noise
@@ -85,7 +83,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
     )
 
     if conf.UNKNOWN_AIRCRAFT_CRAWLING:
-        crawler = AirplaneCrawler(conf)
+        crawler = AirplaneCrawler(conf, app.state.mongodb)
         app.state.crawler = crawler
 
         # Keep crawler at 20-second interval but increase grace time
