@@ -1,6 +1,6 @@
 [project]
 name = "flightradar"
-version = "1.5.3"
+version = "1.5.4"
 description = "Flightradar is a Python backend for tracking and managing flight data."
 requires-python = ">=3.11"
 dependencies = [
