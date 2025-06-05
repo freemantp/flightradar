@@ -13,15 +13,16 @@ RUN apk add --update tzdata
 RUN apk add --no-cache mongodb-tools
 RUN ln -s /usr/share/zoneinfo/Europe/Zurich /etc/localtime
 
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 RUN adduser -D radar
 USER radar
 WORKDIR /home/radar
 
-# install python packages
-COPY requirements.txt requirements.txt
-RUN python -m venv venv
-RUN venv/bin/pip install --upgrade pip
-RUN venv/bin/pip install -r requirements.txt
+# install python packages with uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen
 
 # install app
 COPY --chown=radar app app

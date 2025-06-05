@@ -13,7 +13,8 @@ Fetches [ADS-B](https://en.wikipedia.org/wiki/Automatic_dependent_surveillance_-
 ## Prerequisites
 
 1. Make sure you have Python 3 installed,
-1. Install the dependencies package with ```pip3 install -r requirements.txt```
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) for dependency management
+1. Install the dependencies with ```uv sync```
 
 ## Configuration
 
@@ -81,7 +82,7 @@ The app will create the required collections and indexes in the specified MongoD
 
 Initialize schema:
 ```
-python flightradar.py initschema
+uv run python flightradar.py initschema
 ```
 
 ### Starting the application
@@ -89,17 +90,17 @@ python flightradar.py initschema
 Running it with the development server (__Not recommended__ for productive use). Don't forget to initialize the db (see above) before the first run:
 
 ```
-uvicorn flightradar:app --reload
+uv run uvicorn flightradar:app --reload
 ```
 
 Running it with ASGI in production (__recommended setup__) (binds to all interfaces on port 8083):
 ```
-uvicorn flightradar:app --host 0.0.0.0 --port 8083
+uv run uvicorn flightradar:app --host 0.0.0.0 --port 8083
 ```
 
 Or using Gunicorn with Uvicorn workers:
 ```
-gunicorn flightradar:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8083
+uv run gunicorn flightradar:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8083
 ```
 
 ## Using Windows
