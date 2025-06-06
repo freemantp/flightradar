@@ -1,8 +1,6 @@
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone, timedelta
+from unittest.mock import MagicMock
 
-from app.adsb.flight_updater_coordinator import FlightUpdaterCoordinator
-from app.adsb.constants import MINUTES_BEFORE_CONSIDERED_NEW_FLIGHT
+from app.core.services.flight_updater_coordinator import FlightUpdaterCoordinator
 from tests.db_base_test import MongoDBBaseTestCase
 
 

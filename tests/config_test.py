@@ -1,7 +1,7 @@
 import unittest
 from test import support
 
-from app.config import Config, ConfigSource. LoggingConfig
+from app.config import Config, ConfigSource, LoggingConfig
 
 
 class ConfigTest(unittest.TestCase):

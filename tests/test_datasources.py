@@ -1,11 +1,11 @@
 import unittest
 
-from app.adsb.datasource.bazllfr import BazlLFR
-from app.adsb.datasource.militarymodes_eu import MilitaryModeS
-from app.adsb.datasource.openskynet import OpenskyNet
-from app.adsb.datasource.flightradar24 import Flightradar24
-from app.adsb.datasource.secret_base import SecretBasesUk
-from app.adsb.datasource.hexdb_io import HexdbIo
+from app.data.sources.metadata_sources.bazllfr import BazlLFR
+from app.data.sources.metadata_sources.militarymodes_eu import MilitaryModeS
+from app.data.sources.metadata_sources.openskynet import OpenskyNet
+from app.data.sources.radar_services.flightradar24 import Flightradar24
+from app.data.sources.metadata_sources.secret_base import SecretBasesUk
+from app.data.sources.metadata_sources.hexdb_io import HexdbIo
 
 class ModeSUtilTests(unittest.TestCase):
 
@@ -18,7 +18,7 @@ class ModeSUtilTests(unittest.TestCase):
         sut = BazlLFR()
         aircraft = sut.query_aircraft(self.civilian_hex)
         self.assertIsNotNone(aircraft)
-        self.assertTrue(aircraft.is_complete2())
+        self.assertTrue(aircraft.is_complete_with_operator())
 
     @unittest.skip("This service is flaky")
     def test_militarymodes_eu(self):
@@ -31,20 +31,20 @@ class ModeSUtilTests(unittest.TestCase):
         sut = OpenskyNet()
         aircraft = sut.query_aircraft(self.civilian_hex)
         self.assertIsNotNone(aircraft)
-        self.assertTrue(aircraft.is_complete2())
+        self.assertTrue(aircraft.is_complete_with_operator())
 
     def test_flightradar24(self):
         sut = Flightradar24()
         aircraft = sut.query_aircraft(self.civilian_hex)
         self.assertIsNotNone(aircraft)
-        self.assertTrue(aircraft.is_complete2())  
+        self.assertTrue(aircraft.is_complete_with_operator())  
 
     @unittest.skip("This service is flaky")
     def test_secretbase(self):
         sut = SecretBasesUk('resources')
         aircraft = sut.query_aircraft(self.military_hex)
         self.assertIsNotNone(aircraft)
-        self.assertTrue(aircraft.is_complete2())
+        self.assertTrue(aircraft.is_complete_with_operator())
 
     def test_hexdb_io(self):
         sut = HexdbIo()

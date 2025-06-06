@@ -27,6 +27,7 @@ class AircraftDto(BaseModel):
     icaoType: Optional[str] = None
     type: Optional[str] = None
     op: Optional[str] = None
+    desig: Optional[str] = None
     
     class Config:
         arbitrary_types_allowed = True

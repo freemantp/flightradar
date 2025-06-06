@@ -39,14 +39,14 @@ class MilitaryModeS(AircraftMetadataSource):
 
         if aircraft:
 
-            if not aircraft.type1:
+            if not aircraft.icao_type_code:
                 # Sanitize eurofighters
-                if  aircraft.type2 == 'EF-2000':
-                    aircraft.type1= 'EUFI'
-                    aircraft.type2 = 'Eurofighter EF-2000 Typhoon'
+                if  aircraft.aircraft_type_description == 'EF-2000':
+                    aircraft.icao_type_code = 'EUFI'
+                    aircraft.aircraft_type_description = 'Eurofighter EF-2000 Typhoon'
             # Prevent empty type codes
-            elif aircraft.type1.strip() == 'None' or aircraft.type1.strip() == '-':
-                aircraft.type1 == None
+            elif aircraft.icao_type_code.strip() == 'None' or aircraft.icao_type_code.strip() == '-':
+                aircraft.icao_type_code == None
             
             # Sanitize registrations
             if aircraft.reg:
@@ -81,7 +81,7 @@ class MilitaryModeS(AircraftMetadataSource):
                 if index == 0:
                     aircraft.reg = td.text if td.text else None
                 elif index == 2:
-                    aircraft.type2 = td.text if td.text else None
+                    aircraft.aircraft_type_description = td.text if td.text else None
                 elif index == 4:
                     aircraft.operator = td.text if td.text else None
 

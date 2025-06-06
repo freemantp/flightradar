@@ -3,7 +3,7 @@ import time
 from unittest.mock import patch, MagicMock
 from bson import ObjectId
 
-from app.adsb.db.mongodb_repository import MongoDBRepository
+from app.data.repositories.mongodb_repository import MongoDBRepository
 from tests.db_base_test import MongoDBBaseTestCase
 
 

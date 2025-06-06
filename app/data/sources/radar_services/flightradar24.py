@@ -4,8 +4,8 @@ import time
 import logging
 from typing import Optional
 
-from ..aircraft import Aircraft
-from .aircraft_metadata_source import AircraftMetadataSource
+from app.core.models.aircraft import Aircraft
+from ..metadata_sources import AircraftMetadataSource
 
 logger = logging.getLogger('FR24')
 

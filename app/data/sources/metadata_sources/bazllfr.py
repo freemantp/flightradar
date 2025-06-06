@@ -74,7 +74,7 @@ class BazlLFR(AircraftMetadataSource):
             if response_body:
                 aircraft = response_body[0]
                 reg = aircraft['registration']
-                type1 = aircraft['icaoCode']
+                icao_type_code = aircraft['icaoCode']
 
                 manufacturer = aircraft['manufacturer'] \
                     if aircraft['manufacturer'] not in self.known_replacements \
@@ -94,10 +94,10 @@ class BazlLFR(AircraftMetadataSource):
                 marketing_desc = '' if marketing_desc == 'N/A' else marketing_desc
                 marketing_desc = marketing_desc.title() if marketing_desc.isupper() else marketing_desc
 
-                type2 = '{:s} {:s}'.format(manufacturer, model)
-                type2 = type2 + ' ({:s})'.format(marketing_desc) if marketing_desc else type2
+                aircraft_type_description = '{:s} {:s}'.format(manufacturer, model)
+                aircraft_type_description = aircraft_type_description + ' ({:s})'.format(marketing_desc) if marketing_desc else aircraft_type_description
 
-                return Aircraft(mode_s_hex, reg, type1, type2, operator, source=self.name())
+                return Aircraft(mode_s_hex, reg=reg, icao_type_code=icao_type_code, aircraft_type_description=aircraft_type_description, operator=operator, source=self.name())
                 
         except HTTPError as http_err:
             logger.exception(http_err)

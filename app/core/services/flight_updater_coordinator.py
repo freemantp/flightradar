@@ -58,10 +58,14 @@ class FlightUpdaterCoordinator:
         self._unknown_aircraft_manager = IncompleteAircraftManager(config, mongodb)
             
         
+        logger.info("Loading cached position data...")
         # Initialize position manager with data from flight manager
+        position_count = 0
         for flight_id, flight_pos in self._flight_manager.repository.get_last_positions().items():
             if flight_id in self._flight_manager.flight_last_contact:
                 self._position_manager.flight_lastpos_map[flight_id] = flight_pos
+                position_count += 1
+        logger.info(f"Loaded {position_count} cached positions")
 
     def is_service_alive(self) -> bool:
         """Check if the radar service connection is alive"""

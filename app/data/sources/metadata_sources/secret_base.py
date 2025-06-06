@@ -66,15 +66,15 @@ class SecretBasesUk(AircraftMetadataSource):
                     unnamed_fields.append(field.strip())
 
             if self.ICAO_TYPE_FIELD in named_fields:
-                aircraft.type1 = named_fields[self.ICAO_TYPE_FIELD]
+                aircraft.icao_type_code = named_fields[self.ICAO_TYPE_FIELD]
             if self.REGISTRATION_FIELD in named_fields:
                 aircraft.reg = named_fields[self.REGISTRATION_FIELD]
 
             if len(unnamed_fields) == 4 and self.is_sane_field(unnamed_fields[1]) and self.is_sane_field(unnamed_fields[2]):
                 aircraft.operator = unnamed_fields[2]
-                aircraft.type2 = unnamed_fields[3]
+                aircraft.aircraft_type_description = unnamed_fields[3]
             elif len(unnamed_fields) == 3 and self.is_sane_field(unnamed_fields[1]):
-                aircraft.type2 = unnamed_fields[2]
+                aircraft.aircraft_type_description = unnamed_fields[2]
             else:
                 logger.error('Could not parse Fields')
                 return None

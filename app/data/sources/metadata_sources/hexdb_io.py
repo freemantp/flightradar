@@ -47,26 +47,26 @@ class HexdbIo(AircraftMetadataSource):
             if aircraft_data:
                 mode_s = aircraft_data.get('ModeS', mode_s_hex).upper()
                 reg = aircraft_data.get('Registration')
-                type1 = aircraft_data.get('ICAOTypeCode')
+                icao_type_code = aircraft_data.get('ICAOTypeCode')
                 
-                # Build type2 from manufacturer and type
+                # Build aircraft_type_description from manufacturer and type
                 manufacturer = aircraft_data.get('Manufacturer', '')
                 aircraft_type = aircraft_data.get('Type', '')
                 
                 if manufacturer and aircraft_type:
-                    type2 = f"{manufacturer} {aircraft_type}"
+                    aircraft_type_description = f"{manufacturer} {aircraft_type}"
                 elif manufacturer:
-                    type2 = manufacturer
+                    aircraft_type_description = manufacturer
                 elif aircraft_type:
-                    type2 = aircraft_type
+                    aircraft_type_description = aircraft_type
                 else:
-                    type2 = None
+                    aircraft_type_description = None
 
                 operator = aircraft_data.get('RegisteredOwners')
 
                 # Only return aircraft if we have at least registration or type info
-                if reg or type1 or type2:
-                    return Aircraft(mode_s, reg, type1, type2, operator, source=self.name())
+                if reg or icao_type_code or aircraft_type_description:
+                    return Aircraft(mode_s, reg=reg, icao_type_code=icao_type_code, aircraft_type_description=aircraft_type_description, operator=operator, source=self.name())
 
         except HTTPError as http_err:
             if http_err.response.status_code == requests.codes.too_many:

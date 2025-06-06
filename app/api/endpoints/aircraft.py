@@ -30,7 +30,8 @@ class BulkAircraftResponse(BaseModel):
                         "reg": "EC-MOO",
                         "icaoType": "A321",
                         "type": "Airbus A321 231SL",
-                        "op": "Vueling Airlines"
+                        "op": "Vueling Airlines",
+                        "desig": "L2J"
                     }
                 }
             }
@@ -65,7 +66,8 @@ def get_aircraft(
                                 "reg": "EC-MOO",
                                 "icaoType": "A321",
                                 "type": "Airbus A321 231SL",
-                                "op": "Vueling Airlines"
+                                "op": "Vueling Airlines",
+                                "desig": "L2J"
                             }
                         ],
                         "found_count": 1,

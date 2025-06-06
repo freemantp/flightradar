@@ -11,6 +11,7 @@ from .crawling.crawler import AirplaneCrawler
 logger = logging.getLogger(__name__)
 
 UPDATER_JOB_NAME = 'flight_updater_job'
+CRAWLER_RUN_INTERVAL_SEC = 20
 
 def create_updater(config, mongodb=None):
     updater = FlightUpdaterCoordinator()
@@ -28,14 +29,12 @@ def ensure_db_indexes(app):
         logger.info("MongoDB indexes have been verified and updated if needed")
 
 def configure_scheduling(app: FastAPI, conf: Config):
-    # Configure job stores and executors with optimized settings for performance
     jobstores = {
         'default': MemoryJobStore()
     }
     
-    # Increase thread pool size for better concurrency
     executors = {
-        'default': ThreadPoolExecutor(40)  # Doubled for better parallel processing
+        'default': ThreadPoolExecutor(40) 
     }
     
     job_defaults = {
@@ -43,24 +42,21 @@ def configure_scheduling(app: FastAPI, conf: Config):
         'max_instances': 1
     }
 
-    # Make sure database indexes are properly set up
     ensure_db_indexes(app)
 
-    # Create scheduler with optimized settings
     scheduler = AsyncIOScheduler(
         jobstores=jobstores, 
         executors=executors, 
         job_defaults=job_defaults
     )
     
-    # Store scheduler in app state
     app.state.apscheduler = scheduler
     
     updater = create_updater(conf, app.state.mongodb)
     app.state.updater = updater
 
     # Reduce logging noise
-    logging.getLogger('apscheduler.executors.default').setLevel(logging.ERROR)  # Reduced from WARN
+    logging.getLogger('apscheduler.executors.default').setLevel(logging.ERROR)  
     logging.getLogger('apscheduler.scheduler').setLevel(logging.ERROR)
 
     def my_listener(event):
@@ -69,10 +65,7 @@ def configure_scheduling(app: FastAPI, conf: Config):
 
     scheduler.add_listener(my_listener, EVENT_JOB_MAX_INSTANCES | EVENT_JOB_MISSED)
     
-    # Optimize the update interval to reduce database load
-    # Adjust from 1.0 to 2.0 seconds to allow processing to complete
-    # This effectively halves the database load while still maintaining 
-    # good responsiveness for real-time flight tracking
+
     scheduler.add_job(
         id=UPDATER_JOB_NAME,
         func=lambda: app.state.updater.update(),
@@ -86,15 +79,16 @@ def configure_scheduling(app: FastAPI, conf: Config):
         crawler = AirplaneCrawler(conf, app.state.mongodb)
         app.state.crawler = crawler
 
-        # Keep crawler at 20-second interval but increase grace time
+        logger.info(f"Scheduling aircraft metadata crawler job (every {CRAWLER_RUN_INTERVAL_SEC} seconds)...")
         scheduler.add_job(
             id='airplane_crawler',
             func=lambda: app.state.crawler.crawl_sources(),
             trigger='interval',
-            seconds=20,
-            misfire_grace_time=120,  # Increased from 90 for better reliability
+            seconds=CRAWLER_RUN_INTERVAL_SEC,
+            misfire_grace_time=120,
             coalesce=True
         )
+    else:
+        logger.info("Unknown aircraft crawling disabled")
 
-    # Start the scheduler
     scheduler.start()

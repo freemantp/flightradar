@@ -17,7 +17,8 @@ def toAircraftDto(aircraft: Aircraft) -> AircraftDto:
     return AircraftDto(
         icao24=aircraft.modes_hex,
         reg=aircraft.reg,
-        icaoType=aircraft.type1,
-        type=aircraft.type2,
-        op=aircraft.operator
+        icaoType=aircraft.icao_type_code,
+        type=aircraft.aircraft_type_description,
+        op=aircraft.operator,
+        desig=aircraft.icao_type_designator
     )

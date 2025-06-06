@@ -30,10 +30,12 @@ class FlightManager:
         """Initializes cache from database with optimized loading"""
         self.repository = repository
         recent_flight_timestamp = self._threshold_timestamp()
+        logger.info(f"Loading flights newer than {recent_flight_timestamp}")
 
         page_size = 100
         last_id = None
         more_results = True
+        total_loaded = 0
 
         while more_results:
             results = self.repository.get_recent_flights_last_pos(
@@ -64,9 +66,15 @@ class FlightManager:
                 
                 if flight.get("callsign"):
                     self._flight_callsign_cache[flight_id] = flight["callsign"].strip().upper() if flight["callsign"] else ""
+                
+                total_loaded += 1
 
             if len(results) < page_size:
                 more_results = False
+            else:
+                logger.debug(f"Loaded {total_loaded} flights so far...")
+        
+        logger.info(f"Flight manager cache initialized with {total_loaded} recent flights")
     
     def _threshold_timestamp(self):
         """

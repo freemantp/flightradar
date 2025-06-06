@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,8 @@ def create_app():
     # Config
     conf = Config()
     init_logging(conf.LOGGING_CONFIG)
+    
+    logger = logging.getLogger(__name__)
 
     # Initialize MongoDB
     mongodb = init_mongodb(
@@ -59,6 +62,6 @@ def create_app():
 
     @app.on_event("shutdown")
     def shutdown():
-        pass
+        logger.info("Application shutdown initiated")
 
     return app

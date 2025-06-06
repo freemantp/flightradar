@@ -1,6 +1,6 @@
 import unittest
 
-from app.adsb.util.modes_util import ModesUtil
+from app.core.utils.modes_util import ModesUtil
 
 class ModeSUtilTests(unittest.TestCase):
 

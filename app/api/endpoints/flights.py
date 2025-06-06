@@ -9,7 +9,7 @@ import asyncio
 
 from .. import router
 from ..mappers import toFlightDto
-from ..models import FlightDto
+from ..models import FlightDto, to_datestring
 from ...websocket.manager import ConnectionManager
 from ..dependencies import MetaInfoDep, get_mongodb
 from ...scheduling import UPDATER_JOB_NAME
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 connection_manager = ConnectionManager()
 
 # Constants
-MAX_FLIGHTS_LIMIT = 100
+MAX_FLIGHTS_LIMIT = 300
 
 # Define response models
 
@@ -62,7 +62,7 @@ def ready(request: Request):
 
 @router.get('/flights', response_model=List[FlightDto], 
     summary="Get all flights",
-    description="Returns a list of tracked flights. icao24 is the ICAO 24-bit hex address, cls is the callsign, lstCntct is the time of last contact, firstCntct is the time of first contact",
+    description="Returns a list of currently tracked flights. icao24 is the ICAO 24-bit hex address, cls is the callsign, lstCntct is the time of last contact, firstCntct is the time of first contact",
     responses={
         200: {
             "description": "List of flights",
@@ -85,29 +85,43 @@ def ready(request: Request):
 def get_flights(
     request: Request,
     filter: Optional[str] = Query(None, description="Filter flights (e.g. 'mil' for military only)"),
-    limit: Optional[int] = Query(None, description="Maximum number of flights to return"),
-    mongodb: Database = Depends(get_mongodb)
+    limit: Optional[int] = Query(None, description="Maximum number of flights to return")
 ):
     try:
-        pipeline = []
-
-        # Apply filter
-        if filter == 'mil':
-            pipeline.append({"$match": {"is_military": True}})
-
-        # Sort by first contact descending
-        pipeline.append({"$sort": {"first_contact": -1}})
-
+        # Get currently tracked flights from memory
+        cached_flights = request.app.state.updater.get_cached_flights()
+        
+        flight_manager = request.app.state.updater._flight_manager
+        modes_util = request.app.state.modes_util
+        
+        flight_dtos = []
+        
+        for flight_id, position_report in cached_flights.items():
+            if filter == 'mil' and not modes_util.is_military(position_report.icao24):
+                continue
+                
+            callsign = position_report.callsign
+            last_contact = flight_manager.flight_last_contact.get(flight_id)
+            
+            if last_contact:
+                flight_dto = FlightDto(
+                    id=flight_id,
+                    icao24=position_report.icao24,
+                    cls=callsign,
+                    lstCntct=to_datestring(last_contact),
+                    firstCntct=to_datestring(last_contact)  # For live flights, use last contact as first contact approximation
+                )
+                flight_dtos.append(flight_dto)
+        
+        flight_dtos.sort(key=lambda x: x.lstCntct, reverse=True)
+        
         # Apply limit (default and max limit is MAX_FLIGHTS_LIMIT)
         if limit is not None:
             applied_limit = min(limit, MAX_FLIGHTS_LIMIT)
         else:
             applied_limit = MAX_FLIGHTS_LIMIT
-
-        pipeline.append({"$limit": applied_limit})
-
-        flights = list(mongodb.flights.aggregate(pipeline))
-        return [toFlightDto(f) for f in flights]
+            
+        return flight_dtos[:applied_limit]
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid arguments: {str(e)}")
